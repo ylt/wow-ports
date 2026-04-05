@@ -72,6 +72,8 @@ NUMBER_INDICES = [
     RI["NUM_16_POS"],
     RI["NUM_24_POS"],
     RI["NUM_32_POS"],
+    None,
+    None,
     RI["NUM_64_POS"],
 ]
 
@@ -279,8 +281,15 @@ class LibSerializeDeserializer:
         self._read_table(map_count, value)
         return value
 
-    def _read_string(self, length: int) -> str:
+    def _read_string(self, length: int):
         raw = self._read_bytes(length)
+        # Python-specific: 0xFF prefix marks a bytes object (see _serialize_bytes).
+        # 0xFF is never a valid UTF-8 lead byte so no str round-trip produces it.
+        if raw and raw[0] == 0xFF:
+            value = raw[1:]
+            if length > 2:
+                self._add_reference(self._string_refs, value)
+            return value
         value = raw.decode("utf-8", errors="replace")
         if length > 2:
             self._add_reference(self._string_refs, value)
@@ -349,6 +358,8 @@ class LibSerializeSerializer:
             self._serialize_number(obj)
         elif isinstance(obj, float):
             self._serialize_number(obj)
+        elif isinstance(obj, bytes):
+            self._serialize_bytes(obj)
         elif isinstance(obj, str):
             self._serialize_string(obj)
         elif isinstance(obj, (list, tuple)):
@@ -368,7 +379,7 @@ class LibSerializeSerializer:
     def _serialize_number(self, number) -> None:
         if isinstance(number, float):
             self._serialize_float(number)
-        elif number > -4096 and number < 128:
+        elif number > -4096 and number < 4096:
             self._serialize_small_integer(number)
         else:
             self._serialize_large_integer(number)
@@ -401,6 +412,8 @@ class LibSerializeSerializer:
         sign = 1 if num < 0 else 0
         num = abs(num)
         required_bytes = _get_required_bytes_number(num)
+        if required_bytes == 1:
+            required_bytes = 2
         type_index = NUMBER_INDICES[required_bytes]
         self._write_byte((sign + type_index) << 3)
         self._write_int(num, required_bytes)
@@ -419,6 +432,26 @@ class LibSerializeSerializer:
             self._write_bytes(encoded)
             if length > 2:
                 self._string_refs[s] = len(self._string_refs) + 1
+
+    def _serialize_bytes(self, data: bytes) -> None:
+        # Python-specific: prefix raw bytes with 0xFF sentinel so the
+        # deserializer can distinguish bytes from str on round-trip.
+        # 0xFF is never a valid UTF-8 lead byte, so no str serialization
+        # will produce this prefix.
+        ref_key = data
+        ref = self._string_refs.get(ref_key)
+        if ref is not None:
+            required_bytes = _get_required_bytes(ref)
+            ref_type = STRING_REF_INDICES[required_bytes]
+            self._write_byte(ref_type << 3)
+            self._write_int(ref, required_bytes)
+        else:
+            tagged = b"\xff" + data
+            length = len(tagged)
+            self._write_type_with_count("STRING", length)
+            self._write_bytes(tagged)
+            if length > 2:
+                self._string_refs[ref_key] = len(self._string_refs) + 1
 
     def _serialize_array(self, data: list | tuple) -> None:
         key = id(data)

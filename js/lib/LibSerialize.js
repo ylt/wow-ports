@@ -20,8 +20,8 @@ const TABLEREF_8    = 29, TABLEREF_16   = 30, TABLEREF_24  = 31;
 const EMB_STRING = 0, EMB_TABLE = 1, EMB_ARRAY = 2, EMB_MIXED = 3;
 const EMBEDDED_INDEX_SHIFT = 2, EMBEDDED_COUNT_SHIFT = 4;
 
-// byte_count → type index for large positive integers (index 1 unused; use 2+ bytes)
-const NUMBER_INDICES = [null, null, NUM_16_POS, NUM_24_POS, NUM_32_POS, NUM_64_POS];
+// byte_count → type index for large positive integers (Lua uses keys 2,3,4,7)
+const NUMBER_INDICES = [null, null, NUM_16_POS, NUM_24_POS, NUM_32_POS, null, null, NUM_64_POS];
 
 const STRING_TYPE     = [null, STR_8,      STR_16,      STR_24];
 const TABLE_TYPE      = [null, TABLE_8,    TABLE_16,    TABLE_24];

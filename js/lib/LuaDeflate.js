@@ -14,7 +14,10 @@ class LuaDeflate {
 
         // Strip leading and trailing whitespace.
         encodedStr = encodedStr.trim();
-        if (encodedStr.length <= 1) {
+        if (encodedStr.length === 0) {
+            return '';
+        }
+        if (encodedStr.length === 1) {
             return;
         }
 

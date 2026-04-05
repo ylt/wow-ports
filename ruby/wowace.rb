@@ -42,8 +42,14 @@ module WowAceSerialization
     elsif num.is_a?(Integer)
       "^N#{num}"
     else
-      mantissa, exponent = Math.frexp(num)
-      "^F#{(mantissa * (2**53)).to_i}^f#{exponent - 53}"
+      # Lua uses tonumber(tostring(v))==v — if the float survives string round-trip, use ^N
+      str_val = "%.14g" % num
+      if str_val.to_f == num
+        "^N#{str_val}"
+      else
+        mantissa, exponent = Math.frexp(num)
+        "^F#{(mantissa * (2**53)).to_i}^f#{exponent - 53}"
+      end
     end
   end
 
@@ -67,6 +73,7 @@ module WowAceDeserialization
   def deserialize(str)
     str = str.strip.gsub(/[\x00-\x20]/, '') # remove control characters and whitespace
     raise 'Invalid prefix' unless str.start_with?('^1')
+    raise 'Missing terminator' unless str.end_with?('^^')
 
     data = str[2..-3] # remove prefix and ending ^^
     deserialize_internal(data)
@@ -141,13 +148,7 @@ module WowAceDeserialization
       table[key] = value
     end
     data.slice!(0, 2) # remove ^t
-
-    keys = table.keys.sort
-    if keys == (1..keys.size).to_a
-      table.values
-    else
-      table
-    end
+    table
   end
 end
 
@@ -157,19 +158,3 @@ class WowAceSerializer
 
   # Any common methods or attributes for both serialization and deserialization can remain in the main class.
 end
-
-serializer = WowAceSerializer.new
-serialized_data = serializer.serialize({ 'hello' => 'world', 'test' => 123, 'float' => 123.456,
-                                         'nested' => [nil, nil, nil, 'test'] })
-puts serialized_data
-puts serializer.deserialize(serialized_data).inspect
-
-# Check positive infinity
-serialized_inf = serializer.serialize(Float::INFINITY)
-puts "Serialized Positive Infinity: #{serialized_inf}"
-puts "Deserialized: #{serializer.deserialize(serialized_inf).inspect}"
-
-# Check negative infinity
-serialized_neg_inf = serializer.serialize(-Float::INFINITY)
-puts "\nSerialized Negative Infinity: #{serialized_neg_inf}"
-puts "Deserialized: #{serializer.deserialize(serialized_neg_inf).inspect}"

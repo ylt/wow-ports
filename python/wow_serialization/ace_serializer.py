@@ -96,8 +96,11 @@ class WowAceSerializer:
             raise ValueError("NaN is not serializable")
         if num.is_integer():
             return f"^N{int(num)}"
+        # Lua uses tonumber(tostring(v))==v — if the float survives string round-trip, use ^N
+        str_val = "%.14g" % num
+        if float(str_val) == num:
+            return f"^N{str_val}"
         # frexp-based encoding for non-integer floats (matches JS WowAceSerializer)
-        # adj_exponent = e - 53 is stored; decoder reads mantissa * 2^exponent directly
         m, e = math.frexp(num)
         int_mantissa = int(m * (2 ** 53))
         adj_exponent = e - 53
@@ -164,9 +167,11 @@ class WowAceDeserializer:
     def deserialize(self, data: str) -> Any:
         data = data.strip()
         # Strip embedded whitespace / control chars before the prefix check
-        data = re.sub(r"[\x00-\x08\x0b-\x1a\x1c-\x20]", "", data)
+        data = re.sub(r"[\x00-\x20]", "", data)
         if not data.startswith("^1"):
             raise ValueError("Invalid prefix — expected '^1'")
+        if not data.endswith("^^"):
+            raise ValueError("Missing '^^' terminator")
         # Remove ^1 prefix and ^^ terminator
         payload = data[2:-2]
         cur = _Cursor(payload)
@@ -230,12 +235,6 @@ class WowAceDeserializer:
             value = self._read_value(cur)
             table[key] = value
         cur.read(2)  # consume '^t'
-
-        # Array detection: sequential 1-based integer keys → list
-        if table and all(isinstance(k, int) for k in table):
-            sorted_keys = sorted(table.keys())
-            if sorted_keys == list(range(1, len(sorted_keys) + 1)):
-                return [table[k] for k in sorted_keys]
         return table
 
 

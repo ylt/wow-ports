@@ -12,9 +12,13 @@ FIXTURES_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'testdata', 
 with open(FIXTURES_PATH, 'r', encoding='utf-8') as _f:
     _FIXTURES = json.load(_f)
 
+_ACE_FIXTURES = _FIXTURES['ace_serializer']
+_ACE_DET_FIXTURES = [f for f in _ACE_FIXTURES if f.get('serialize_deterministic') is not False]
+_LD_FIXTURES = _FIXTURES['lua_deflate']
+
 
 def to_native(v):
-    """Convert a fixture input value (which may contain __type__ wrappers) to a native Python value."""
+    """Convert a fixture value (which may contain __type__ wrappers) to a native Python value."""
     if v is None or isinstance(v, (bool, int, float, str)):
         return v
     if isinstance(v, list):
@@ -33,71 +37,49 @@ def to_native(v):
     return v
 
 
-# ── AceSerializer fixtures — deserialize ──────────────────────────────────────
-
-class TestAceDeserialize:
-    @pytest.fixture(autouse=True)
-    def _ace(self):
-        self.ace = WowAce()
-
-    @pytest.mark.parametrize('fixture', _FIXTURES['ace_serializer'],
-                             ids=[f['name'] for f in _FIXTURES['ace_serializer']])
-    def test_deserialize(self, fixture):
-        result = self.ace.deserialize(fixture['ace_serialized'])
-        assert result == to_native(fixture['input'])
+@pytest.fixture
+def ace():
+    return WowAce()
 
 
-# ── AceSerializer fixtures — serialize ───────────────────────────────────────
+def describe_ace_serializer_fixtures():
 
-class TestAceSerialize:
-    @pytest.fixture(autouse=True)
-    def _ace(self):
-        self.ace = WowAce()
+    def describe_deserialize():
+        @pytest.mark.parametrize('fixture', _ACE_FIXTURES,
+                                 ids=[f['name'] for f in _ACE_FIXTURES])
+        def it_deserializes(fixture, ace):
+            result = ace.deserialize(fixture['ace_serialized'])
+            assert result == to_native(fixture['input'])
 
-    @pytest.mark.parametrize(
-        'fixture',
-        [f for f in _FIXTURES['ace_serializer'] if f.get('serialize_deterministic') is not False],
-        ids=[f['name'] for f in _FIXTURES['ace_serializer']
-             if f.get('serialize_deterministic') is not False],
-    )
-    def test_serialize(self, fixture):
-        result = self.ace.serialize(to_native(fixture['input']))
-        assert result == fixture['ace_serialized']
+    def describe_serialize():
+        @pytest.mark.parametrize('fixture', _ACE_DET_FIXTURES,
+                                 ids=[f['name'] for f in _ACE_DET_FIXTURES])
+        def it_serializes(fixture, ace):
+            result = ace.serialize(to_native(fixture['input']))
+            assert result == fixture['ace_serialized']
 
-
-# ── AceSerializer fixtures — round-trip ──────────────────────────────────────
-# deserialize(wire) → value1 → serialize → deserialize → value2
-# Assert value2 deeply equals value1 (internal consistency).
-
-class TestAceRoundTrip:
-    @pytest.fixture(autouse=True)
-    def _ace(self):
-        self.ace = WowAce()
-
-    @pytest.mark.parametrize('fixture', _FIXTURES['ace_serializer'],
-                             ids=[f['name'] for f in _FIXTURES['ace_serializer']])
-    def test_roundtrip(self, fixture):
-        value1 = self.ace.deserialize(fixture['ace_serialized'])
-        wire2 = self.ace.serialize(value1)
-        value2 = self.ace.deserialize(wire2)
-        assert value2 == value1
+    def describe_roundtrip():
+        @pytest.mark.parametrize('fixture', _ACE_FIXTURES,
+                                 ids=[f['name'] for f in _ACE_FIXTURES])
+        def it_roundtrips(fixture, ace):
+            value1 = ace.deserialize(fixture['ace_serialized'])
+            wire2 = ace.serialize(value1)
+            value2 = ace.deserialize(wire2)
+            assert value2 == value1
 
 
-# ── LuaDeflate fixtures — encode ─────────────────────────────────────────────
+def describe_lua_deflate_fixtures():
 
-class TestLuaDeflateEncode:
-    @pytest.mark.parametrize('fixture', _FIXTURES['lua_deflate'],
-                             ids=[f['name'] for f in _FIXTURES['lua_deflate']])
-    def test_encode(self, fixture):
-        input_bytes = bytes.fromhex(fixture['input_hex'])
-        assert encode_for_print(input_bytes) == fixture['encoded']
+    def describe_encode():
+        @pytest.mark.parametrize('fixture', _LD_FIXTURES,
+                                 ids=[f['name'] for f in _LD_FIXTURES])
+        def it_encodes(fixture):
+            input_bytes = bytes.fromhex(fixture['input_hex'])
+            assert encode_for_print(input_bytes) == fixture['encoded']
 
-
-# ── LuaDeflate fixtures — decode ─────────────────────────────────────────────
-
-class TestLuaDeflateDecode:
-    @pytest.mark.parametrize('fixture', _FIXTURES['lua_deflate'],
-                             ids=[f['name'] for f in _FIXTURES['lua_deflate']])
-    def test_decode(self, fixture):
-        decoded = decode_for_print(fixture['encoded'])
-        assert decoded.hex() == fixture['input_hex']
+    def describe_decode():
+        @pytest.mark.parametrize('fixture', _LD_FIXTURES,
+                                 ids=[f['name'] for f in _LD_FIXTURES])
+        def it_decodes(fixture):
+            decoded = decode_for_print(fixture['encoded'])
+            assert decoded.hex() == fixture['input_hex']

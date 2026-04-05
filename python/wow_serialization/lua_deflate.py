@@ -33,14 +33,21 @@ def encode_for_print(data: bytes) -> str:
     return "".join(out)
 
 
-def decode_for_print(encoded: str) -> bytes:
-    """Decode a WoW custom base64 string back to bytes."""
-    if not isinstance(encoded, str):
-        raise TypeError(f"Expected str, got {type(encoded).__name__}")
+def decode_for_print(encoded) -> bytes | None:
+    """Decode a WoW custom base64 string back to bytes, or None for invalid input."""
+    if isinstance(encoded, (bytes, bytearray)):
+        try:
+            encoded = encoded.decode("ascii")
+        except (UnicodeDecodeError, ValueError):
+            return None
+    elif not isinstance(encoded, str):
+        return None
 
     encoded = encoded.strip()
-    if len(encoded) <= 1:
+    if len(encoded) == 0:
         return b""
+    if len(encoded) == 1:
+        return None
 
     out = []
     for i in range(0, len(encoded), 4):
@@ -49,7 +56,7 @@ def decode_for_print(encoded: str) -> bytes:
         for ch in group:
             idx = _BIT_TO_BYTE.get(ch)
             if idx is None:
-                raise ValueError(f"Invalid character in encoded string: {ch!r}")
+                return None
             indices.append(idx)
 
         # Build little-endian value

@@ -60,6 +60,8 @@ class LibSerialize
     READER_INDEX[:NUM_16_POS],
     READER_INDEX[:NUM_24_POS],
     READER_INDEX[:NUM_32_POS],
+    nil,
+    nil,
     READER_INDEX[:NUM_64_POS],
   ].freeze
 
@@ -135,8 +137,11 @@ class LibSerializeDeserialize < LibSerialize
   end
 
   def deserialize
-    read_byte
+    version = read_byte
+    raise "Invalid LibSerialize data: bad version byte #{version}" unless version == 1
     read_object
+  rescue => e
+    raise "LibSerialize deserialization failed: #{e.message}"
   end
 
   def read_bytes(length)
@@ -426,7 +431,7 @@ class LibSerializeSerialize < LibSerialize
   def serialize_number(number)
     if number.is_a?(Float)
       serialize_float(number)
-    elsif number > -4096 && number < 128
+    elsif number > -4096 && number < 4096
       serialize_small_integer(number)
     else
       serialize_large_integer(number)
@@ -438,7 +443,7 @@ class LibSerializeSerialize < LibSerialize
     as_string = num_abs.to_s
     if as_string.length < 7 && as_string.to_f == num_abs && num_abs.finite?
       sign = num < 0 ? 1 : 0
-      write_byte(sign + READER_INDEX[:NUM_FLOATSTR_POS] << 3)
+      write_byte((READER_INDEX[:NUM_FLOATSTR_POS] + sign) << 3)
       write_byte(as_string.length)
       write_string(as_string)
     else
@@ -463,7 +468,8 @@ class LibSerializeSerialize < LibSerialize
     sign = num < 0 ? 1 : 0
     num = num.abs
     required_bytes = get_required_bytes_number(num)
-    write_byte(sign + NUMBER_INDICES[required_bytes] << 3)
+    required_bytes = 2 if required_bytes == 1
+    write_byte((NUMBER_INDICES[required_bytes] + sign) << 3)
     write_int(num, required_bytes)
   end
 
@@ -476,22 +482,22 @@ class LibSerializeSerialize < LibSerialize
     if ref
       required_bytes = get_required_bytes(ref)
       ref_type = STRING_REF_INDICES[required_bytes]
-      write_byte(ref_type)
+      write_byte(ref_type << 3)
       write_int(ref, required_bytes)
     else
       len = str.bytesize
       write_type_with_count(:STRING, len)
       write_string(str)
-      @string_refs[str] = @string_refs.count if len > 2
+      @string_refs[str] = @string_refs.count + 1 if len > 2
     end
   end
 
   def serialize_array(data)
-    ref = @object_refs[data]
+    ref = @object_refs[data.object_id]
     if ref
       required_bytes = get_required_bytes(ref)
       ref_type = TABLE_REF_INDICES[required_bytes]
-      write_byte(ref_type)
+      write_byte(ref_type << 3)
       write_int(ref, required_bytes)
     else
       len = data.length
@@ -499,16 +505,16 @@ class LibSerializeSerialize < LibSerialize
       data.each do |item|
         write_object(item)
       end
-      @object_refs[data] = @object_refs.count if len > 2
+      @object_refs[data.object_id] = @object_refs.count + 1 if len > 2
     end
   end
 
   def serialize_table(data)
-    ref = @object_refs[data.to_s]
+    ref = @object_refs[data.object_id]
     if ref
       required_bytes = get_required_bytes(ref)
       ref_type = TABLE_REF_INDICES[required_bytes]
-      write_byte(ref_type)
+      write_byte(ref_type << 3)
       write_int(ref, required_bytes)
     else
       len = data.length
@@ -517,7 +523,7 @@ class LibSerializeSerialize < LibSerialize
         write_object(key)
         write_object(value)
       end
-      @object_refs[data.to_s] = @object_refs.count if len > 2
+      @object_refs[data.object_id] = @object_refs.count + 1 if len > 2
     end
   end
 

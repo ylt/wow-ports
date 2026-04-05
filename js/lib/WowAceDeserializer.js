@@ -58,7 +58,11 @@ class WowAceDeserializer {
     }
 
     deserialize() {
-        return this.deserializeInternal();
+        const result = this.deserializeInternal();
+        if (!this.stream.readPattern('^^')) {
+            throw new Error("Missing '^^' terminator");
+        }
+        return result;
     }
 
     deserializeInternal() {
@@ -118,15 +122,6 @@ class WowAceDeserializer {
         }
         this.stream.skip(2);
 
-        // Convert to array if keys are sequential 1-based integers (matches Ruby behavior)
-        const keys = Object.keys(table);
-        if (keys.length > 0) {
-            const intKeys = keys.map(k => Number(k));
-            const sorted = [...intKeys].sort((a, b) => a - b);
-            if (sorted.every((k, i) => k === i + 1 && Number.isInteger(k))) {
-                return sorted.map(k => table[k]);
-            }
-        }
         return table;
     }
 }

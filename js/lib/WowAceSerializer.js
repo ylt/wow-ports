@@ -56,12 +56,16 @@ class WowAceSerializer {
         }
         if (Number.isInteger(num)) {
             return `^N${num}`;
-        } else {
-            const [m, e] = this._frexp(num);
-            const int_mantissa = Math.floor(m * Math.pow(2, 53));
-            const adj_exponent = e - 53;
-            return `^F${int_mantissa}^f${adj_exponent}`;
         }
+        // Lua-compatible: if float survives string round-trip, use ^N (simpler path)
+        const str = String(num);
+        if (parseFloat(str) === num) {
+            return `^N${str}`;
+        }
+        const [m, e] = this._frexp(num);
+        const int_mantissa = Math.floor(m * Math.pow(2, 53));
+        const adj_exponent = e - 53;
+        return `^F${int_mantissa}^f${adj_exponent}`;
     }
 
     static _serializeTable(table) {
