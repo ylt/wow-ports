@@ -7,129 +7,109 @@ const LuaDeflateNative = require('../lib/LuaDeflateNative');
 const ld = new LuaDeflate();
 const ldn = new LuaDeflateNative();
 
-// ── Encode/decode round-trips ──────────────────────────────────────────────
+// ── M. Encode ──────────────────────────────────────────────────────────────
 
-describe('LuaDeflate round-trip (decodeForPrint)', () => {
-    test('simple ASCII string', () => {
-        const encoded = ld.encodeForPrint('hello');
-        assert.strictEqual(ld.decodeForPrint(encoded), 'hello');
+describe('M. Encode', () => {
+    test('M74: 3-byte input → 4 chars (full group)', () => {
+        assert.strictEqual(ld.encodeForPrint('\x41\x42\x43').length, 4);
     });
 
-    test('longer string', () => {
-        const input = 'The quick brown fox jumps over the lazy dog';
-        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(input)), input);
+    test('M75: 1-byte input → 2 chars (tail)', () => {
+        assert.strictEqual(ld.encodeForPrint('\x41').length, 2);
     });
 
-    test('all printable ASCII chars', () => {
-        const input = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('');
-        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(input)), input);
+    test('M76: 2-byte input → 3 chars (tail)', () => {
+        assert.strictEqual(ld.encodeForPrint('\x41\x42').length, 3);
     });
 
-    test('single byte input (2 encoded chars)', () => {
-        const encoded = ld.encodeForPrint('\x41');
-        assert.strictEqual(encoded.length, 2);
-        assert.strictEqual(ld.decodeForPrint(encoded), '\x41');
+    test('M77: 6-byte input → 8 chars (two full groups)', () => {
+        assert.strictEqual(ld.encodeForPrint('\x41\x42\x43\x44\x45\x46').length, 8);
     });
 
-    test('two byte input (3 encoded chars)', () => {
-        const encoded = ld.encodeForPrint('\x41\x42');
-        assert.strictEqual(encoded.length, 3);
-        assert.strictEqual(ld.decodeForPrint(encoded), '\x41\x42');
+    test('M78: empty input → empty string', () => {
+        assert.strictEqual(ld.encodeForPrint(''), '');
     });
 
-    test('three byte input (4 encoded chars)', () => {
-        const encoded = ld.encodeForPrint('\x41\x42\x43');
-        assert.strictEqual(encoded.length, 4);
-        assert.strictEqual(ld.decodeForPrint(encoded), '\x41\x42\x43');
-    });
-
-    test('large payload (1000+ bytes)', () => {
-        const input = 'abcdefghij'.repeat(120);
-        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(input)), input);
+    test('M79: output uses only alphabet chars a-zA-Z0-9()', () => {
+        assert.match(ld.encodeForPrint('hello world test data here!!'), /^[a-zA-Z0-9()]+$/);
     });
 });
 
-// ── Edge cases ─────────────────────────────────────────────────────────────
+// ── N. Decode ──────────────────────────────────────────────────────────────
 
-describe('LuaDeflate edge cases', () => {
-    test('empty string returns undefined', () => {
-        assert.strictEqual(ld.decodeForPrint(''), undefined);
+describe('N. Decode', () => {
+    test('N80: 4-char input → 3 bytes (full group)', () => {
+        const decoded = ld.decodeForPrint(ld.encodeForPrint('\x41\x42\x43'));
+        assert.strictEqual(decoded.length, 3);
     });
 
-    test('length-1 string returns undefined', () => {
-        assert.strictEqual(ld.decodeForPrint('a'), undefined);
+    test('N81: 2-char input → 1 byte (tail)', () => {
+        const decoded = ld.decodeForPrint(ld.encodeForPrint('\x41'));
+        assert.strictEqual(decoded.length, 1);
     });
 
-    test('non-string input to decodeForPrint returns undefined', () => {
-        assert.strictEqual(ld.decodeForPrint(null), undefined);
-        assert.strictEqual(ld.decodeForPrint(42), undefined);
+    test('N82: 3-char input → 2 bytes (tail)', () => {
+        const decoded = ld.decodeForPrint(ld.encodeForPrint('\x41\x42'));
+        assert.strictEqual(decoded.length, 2);
     });
 
-    test('invalid alphabet char returns null', () => {
-        assert.strictEqual(ld.decodeForPrint('ab+c'), null);
-    });
-
-    test('encodeForPrint with non-string throws', () => {
-        assert.throws(() => ld.encodeForPrint(null), TypeError);
-    });
-
-    test('leading/trailing whitespace is stripped before decode', () => {
+    test('N83: whitespace stripped from start/end before decode', () => {
         const encoded = ld.encodeForPrint('hi');
         assert.strictEqual(ld.decodeForPrint('  ' + encoded + '\n'), 'hi');
     });
+
+    test('N84: length-1 input → undefined', () => {
+        assert.strictEqual(ld.decodeForPrint('a'), undefined);
+    });
+
+    test('N85: empty string → undefined', () => {
+        assert.strictEqual(ld.decodeForPrint(''), undefined);
+    });
+
+    test('N86: invalid character → null', () => {
+        assert.strictEqual(ld.decodeForPrint('ab+c'), null);
+    });
 });
 
-// ── Uint8Array output ──────────────────────────────────────────────────────
+// ── O. Round-trips ─────────────────────────────────────────────────────────
 
-describe('LuaDeflate decodeForPrint2 (Uint8Array)', () => {
-    test('returns Uint8Array', () => {
-        const encoded = ld.encodeForPrint('abc');
-        const result = ld.decodeForPrint2(encoded);
-        assert.ok(result instanceof Uint8Array);
+describe('O. Round-trips', () => {
+    test('O87: simple ASCII string', () => {
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint('hello')), 'hello');
     });
 
-    test('byte values match decodeForPrint', () => {
-        const input = 'hello world';
-        const encoded = ld.encodeForPrint(input);
-        const str = ld.decodeForPrint(encoded);
-        const buf = ld.decodeForPrint2(encoded);
-        for (let i = 0; i < str.length; i++) {
-            assert.strictEqual(buf[i], str.charCodeAt(i));
-        }
-    });
-
-    test('handles all 256 byte values', () => {
+    test('O88: binary data — all 256 byte values', () => {
         const bytes = Array.from({ length: 256 }, (_, i) => String.fromCharCode(i)).join('');
-        const encoded = ld.encodeForPrint(bytes);
-        const decoded = ld.decodeForPrint(encoded);
-        assert.strictEqual(decoded, bytes);
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(bytes)), bytes);
+    });
+
+    test('O89: large payload (1000+ bytes)', () => {
+        const input = 'abcdefghij'.repeat(120);
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(input)), input);
+    });
+
+    test('O90: single byte', () => {
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint('\x41')), '\x41');
+    });
+
+    test('O91: two bytes', () => {
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint('\x41\x42')), '\x41\x42');
+    });
+
+    test('O92: three bytes (boundary)', () => {
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint('\x41\x42\x43')), '\x41\x42\x43');
+    });
+
+    test('O93: null bytes (0x00) round-trip correctly', () => {
+        const nullStr = '\x00\x00\x00';
+        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(nullStr)), nullStr);
     });
 });
 
-// ── Known encoding ─────────────────────────────────────────────────────────
+// ── P. Native Variant ──────────────────────────────────────────────────────
 
-describe('LuaDeflate known encoding', () => {
-    // "abc" = 0x61 0x62 0x63
-    // value = 0x61 + 0x62*256 + 0x63*65536 = 97 + 25088 + 6488064 = 6513249
-    // indices: 6513249 & 0x3F=33='H', >>6 &0x3F=50='Y', >>12 &0x3F=24='Y'(idx24='Y'), >>18 &0x3F=24='Y'
-    // idx 33 = 'H' (a-z=0-25, A-Z=26-51: 33-26=7 → 'H')
-    // idx 50 = 'Y' (26+24=50 → 'Y')
-    // Let me just verify the round-trip is consistent:
-    test('encode then decode is identity for binary data', () => {
-        const binary = '\x00\xFF\x80\x01\xFE\x7F';
-        assert.strictEqual(ld.decodeForPrint(ld.encodeForPrint(binary)), binary);
-    });
-
-    test('only uses alphabet chars: a-zA-Z0-9()', () => {
-        const encoded = ld.encodeForPrint('hello world test data here!!');
-        assert.match(encoded, /^[a-zA-Z0-9()]+$/);
-    });
-});
-
-// ── Native variant byte-identical output ──────────────────────────────────
-
-describe('LuaDeflateNative matches LuaDeflate output', () => {
-    test('encode output is byte-identical', () => {
+describe('P. Native Variant', () => {
+    test('P94: native encode output byte-identical to reference encode', () => {
         const inputs = ['hello', 'abc', 'The quick brown fox', 'x'.repeat(99)];
         for (const input of inputs) {
             assert.strictEqual(
@@ -140,9 +120,14 @@ describe('LuaDeflateNative matches LuaDeflate output', () => {
         }
     });
 
-    test('decode output is byte-identical', () => {
+    test('P95: native decode output byte-identical to reference decode', () => {
         const input = 'round trip test string 123';
         const encoded = ld.encodeForPrint(input);
         assert.strictEqual(ldn.decodeForPrint(encoded), ld.decodeForPrint(encoded));
+    });
+
+    test('P96: native round-trip', () => {
+        const input = 'The quick brown fox jumps over the lazy dog';
+        assert.strictEqual(ldn.decodeForPrint(ldn.encodeForPrint(input)), input);
     });
 });

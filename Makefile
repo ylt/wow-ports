@@ -1,6 +1,6 @@
 PYTHON := uv run
 
-.PHONY: test test-js test-ruby test-python install install-js install-ruby install-python
+.PHONY: test test-js test-ruby test-python test-lua install install-js install-ruby install-python install-lua
 
 test: test-js test-ruby test-python test-lua
 
@@ -14,7 +14,7 @@ test-python:
 	cd python && uv run --extra test pytest tests/ -v
 
 test-lua:
-	lua lua/test_ace_serializer.lua && lua lua/test_lua_deflate.lua && lua lua/test_lib_serialize.lua
+	cd lua && busted test/ --verbose
 
 install: install-js install-ruby install-python install-lua
 
