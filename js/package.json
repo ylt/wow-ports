@@ -3,5 +3,7 @@
   "version": "1.0.0",
   "main": "lib/LuaDeflate.js",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "cbor-x": "^1.5.4"
+  }
 }

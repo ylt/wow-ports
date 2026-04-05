@@ -4,6 +4,7 @@ require 'zlib'
 require_relative 'lua_deflate'
 require_relative 'wowace'
 require_relative 'lib_serialize'
+require_relative 'wow_cbor'
 
 ExportResult = Struct.new(:addon, :version, :data, :metadata)
 
@@ -38,7 +39,9 @@ class Pipeline
       inflated = inflate_raw(compressed)
 
       # Deserialize
-      data = if version == 2
+      data = if addon == 'plater' && version == 2
+               WowCbor.decode(inflated)
+             elsif version == 2
                LibSerializeDeserialize.deserialize(inflated)
              else
                WowAceSerializer.new.deserialize(inflated.force_encoding('UTF-8'))
@@ -55,7 +58,9 @@ class Pipeline
       metadata = export_result.metadata
 
       # Serialize
-      serialized = if version == 2
+      serialized = if addon == 'plater' && version == 2
+                     WowCbor.encode(data)
+                   elsif version == 2
                      LibSerializeSerialize.serialize(data)
                    else
                      WowAceSerializer.new.serialize(data)
@@ -78,7 +83,9 @@ class Pipeline
     private
 
     def detect_addon(str)
-      if str.start_with?('!WA:2!')
+      if str.start_with?('!PLATER:2!')
+        { addon: 'plater', version: 2, prefix: '!PLATER:2!' }
+      elsif str.start_with?('!WA:2!')
         { addon: 'weakauras', version: 2, prefix: '!WA:2!' }
       elsif str.start_with?('!E1!')
         { addon: 'elvui', version: 1, prefix: '!E1!' }
@@ -90,9 +97,10 @@ class Pipeline
     end
 
     def prefix_for(addon, version)
-      return '!WA:2!' if version == 2
-      return '!E1!'   if addon == 'elvui'
-      return '!'      if version >= 1
+      return '!PLATER:2!' if addon == 'plater' && version == 2
+      return '!WA:2!'     if version == 2
+      return '!E1!'       if addon == 'elvui'
+      return '!'          if version >= 1
 
       ''
     end
