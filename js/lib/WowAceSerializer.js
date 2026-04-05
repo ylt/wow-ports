@@ -66,7 +66,15 @@ class WowAceSerializer {
 
     static _serializeTable(table) {
         const serialized = Object.entries(table)
-            .map(([key, value]) => `${this._serializeInternal(key)}${this._serializeInternal(value)}`)
+            .map(([key, value]) => {
+                // Object.entries always returns string keys; detect numeric keys
+                // (e.g. array index 1 → "1") and serialize them as numbers.
+                const numKey = key === '' ? NaN : Number(key);
+                const serializedKey = Number.isFinite(numKey)
+                    ? this._serializeNumber(numKey)
+                    : this._serializeString(key);
+                return `${serializedKey}${this._serializeInternal(value)}`;
+            })
             .join('');
         return `^T${serialized}^t`;
     }

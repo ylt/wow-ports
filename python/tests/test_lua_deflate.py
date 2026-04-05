@@ -1,11 +1,10 @@
 """Tests for LuaDeflate encode/decode."""
 
 import pytest
-from wow_serialization.lua_deflate import (
-    decode_for_print,
-    decode_for_print_native,
-    encode_for_print,
-    encode_for_print_native,
+from wow_serialization.lua_deflate import decode_for_print, encode_for_print
+from wow_serialization.lua_deflate_native import (
+    decode_for_print as decode_for_print_native,
+    encode_for_print as encode_for_print_native,
 )
 
 

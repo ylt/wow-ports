@@ -96,10 +96,12 @@ class WowAceSerializer:
             raise ValueError("NaN is not serializable")
         if num.is_integer():
             return f"^N{int(num)}"
-        # frexp-based encoding for non-integer floats
+        # frexp-based encoding for non-integer floats (matches JS WowAceSerializer)
+        # adj_exponent = e - 53 is stored; decoder reads mantissa * 2^exponent directly
         m, e = math.frexp(num)
         int_mantissa = int(m * (2 ** 53))
-        return f"^F{int_mantissa}^f{e}"
+        adj_exponent = e - 53
+        return f"^F{int_mantissa}^f{adj_exponent}"
 
     def _serialize_table(self, table: dict) -> str:
         parts = []
@@ -215,9 +217,9 @@ class WowAceDeserializer:
         exponent_str = cur.read_until(_TYPE_PREFIX)
         mantissa = int(mantissa_str)
         exponent = int(exponent_str)
-        # Reconstruct: mantissa is already int(m * 2^53), exponent is raw frexp e
-        # So value = mantissa * 2^(exponent - 53)
-        return math.ldexp(mantissa, exponent - 53)
+        # Wire format: adj_exponent = e - 53 (matches JS WowAceSerializer)
+        # Decode: mantissa * 2^exponent (no further adjustment needed)
+        return math.ldexp(mantissa, exponent)
 
     def _read_table(self, cur: _Cursor) -> dict | list:
         table: dict = {}

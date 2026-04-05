@@ -39,11 +39,11 @@ module WowAceSerialization
       '^N1.#INF'
     elsif num.infinite? == -1 # Negative Infinity
       '^N-1.#INF'
-    elsif num.is_a?(Integer) || num.to_s == num.to_f.to_s
+    elsif num.is_a?(Integer)
       "^N#{num}"
     else
       mantissa, exponent = Math.frexp(num)
-      "^F#{(mantissa * (2**53)).to_i}^f#{exponent}"
+      "^F#{(mantissa * (2**53)).to_i}^f#{exponent - 53}"
     end
   end
 
@@ -130,7 +130,7 @@ module WowAceDeserialization
     mantissa = data.slice!(/^-?\d+/).to_i
     data.slice!(0, 2) # remove ^f
     exponent = data.slice!(/^-?\d+/).to_i
-    Math.ldexp(mantissa, exponent - 53).to_f
+    Math.ldexp(mantissa, exponent).to_f
   end
 
   def deserialize_table(data)

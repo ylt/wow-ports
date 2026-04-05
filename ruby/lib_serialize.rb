@@ -219,7 +219,7 @@ class LibSerializeDeserialize < LibSerialize
     add_reference(@table_refs, value)
 
     array_values = read_array(array_count)
-    value.merge!(Hash[array_values.map.with_index { |v, i| [i, v] }])
+    value.merge!(Hash[array_values.map.with_index(1) { |v, i| [i, v] }])
 
     read_table(map_count, value)
 
@@ -417,6 +417,8 @@ class LibSerializeSerialize < LibSerialize
     write_byte(READER_INDEX[:NIL])
   end
 
+  alias_method :serialize_nil, :write_nil
+
   def write_int(num, required)
     write_string(int_to_string(num, required))
   end
@@ -488,7 +490,7 @@ class LibSerializeSerialize < LibSerialize
     ref = @object_refs[data]
     if ref
       required_bytes = get_required_bytes(ref)
-      ref_type = ARRAY_REF_INDICES[required_bytes]
+      ref_type = TABLE_REF_INDICES[required_bytes]
       write_byte(ref_type)
       write_int(ref, required_bytes)
     else
@@ -505,7 +507,7 @@ class LibSerializeSerialize < LibSerialize
     ref = @object_refs[data.to_s]
     if ref
       required_bytes = get_required_bytes(ref)
-      ref_type = HASH_REF_INDICES[required_bytes]
+      ref_type = TABLE_REF_INDICES[required_bytes]
       write_byte(ref_type)
       write_int(ref, required_bytes)
     else

@@ -81,3 +81,61 @@ RSpec.describe 'WowAceSerializer escape characters' do
     end
   end
 end
+
+RSpec.describe 'WowAceSerializer float serialization' do
+  let(:s) { WowAceSerializer.new }
+
+  describe 'serialization' do
+    it '3.0 uses ^F path (non-integer floats always use frexp)' do
+      wire = s.serialize(3.0)
+      expect(wire).to start_with('^1^F')
+      expect(s.deserialize(wire)).to eq(3.0)
+    end
+
+    it '3.14 uses ^F path matching cross-language fixture' do
+      expect(s.serialize(3.14)).to eq('^1^F7070651414971679^f-51^^')
+    end
+
+    it 'integer 42 uses ^N path' do
+      expect(s.serialize(42)).to eq('^1^N42^^')
+    end
+
+    it 'positive infinity uses ^N1.#INF' do
+      expect(s.serialize(Float::INFINITY)).to eq('^1^N1.#INF^^')
+    end
+
+    it 'negative infinity uses ^N-1.#INF' do
+      expect(s.serialize(-Float::INFINITY)).to eq('^1^N-1.#INF^^')
+    end
+  end
+
+  describe 'deserialization' do
+    it 'decodes ^F wire format back to original float' do
+      wire = s.serialize(3.14)
+      expect(s.deserialize(wire)).to eq(3.14)
+    end
+  end
+
+  describe 'round-trip floats' do
+    [0.1, 123.456, -99.99, 1e-10, 1e+10].each do |val|
+      it "round-trips #{val}" do
+        expect(s.deserialize(s.serialize(val))).to eq(val)
+      end
+    end
+
+    it 'round-trips 3.14' do
+      expect(s.deserialize(s.serialize(3.14))).to eq(3.14)
+    end
+  end
+
+  describe 'float guard correctness' do
+    it '1.0000000000000002 uses ^F path (edge case: not string-round-trippable)' do
+      wire = s.serialize(1.0000000000000002)
+      # 1.0000000000000002.to_s.to_f may or may not equal the original;
+      # if not, it falls through to ^F
+      # Either way, round-trip must be exact
+      result = s.deserialize(wire)
+      expect(result).to eq(1.0000000000000002)
+    end
+  end
+end

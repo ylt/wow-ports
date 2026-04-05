@@ -78,8 +78,13 @@ class TestSerializePrimitives:
         with pytest.raises((ValueError, Exception)):
             ser.serialize(float("nan"))
 
+    def test_float_3_14_wire_format(self, ser):
+        # Matches JS test: WowAceSerializer.serialize(3.14) === '^1^F7070651414971679^f-51^^'
+        # frexp(3.14): m≈0.785, e=2 → int_m=7070651414971679, adj_e=2-53=-51
+        assert ser.serialize(3.14) == "^1^F7070651414971679^f-51^^"
+
     def test_float_frexp_format(self, ser):
-        # Non-integer float should use ^F...^f... format
+        # Non-integer float should use ^F...^f... format with adjusted exponent
         wire = ser.serialize(3.14)
         assert "^F" in wire
         assert "^f" in wire
@@ -202,12 +207,18 @@ class TestDeserializePrimitives:
     def test_neg_inf_alias(self, de):
         assert de.deserialize("^1^N-inf^^") == -math.inf
 
-    def test_float_frexp_format(self, de):
-        # Manually constructed: 0.5 = frexp gives m=0.5, e=0
-        # int_mantissa = int(0.5 * 2^53) = 4503599627370496
-        # wire: ^F4503599627370496^f0
-        result = de.deserialize("^1^F4503599627370496^f0^^")
-        assert abs(result - math.ldexp(4503599627370496, 0 - 53)) < 1e-15
+    def test_float_frexp_format_3_14(self, de):
+        # Matches JS test: wire '^1^F7070651414971679^f-51^^' → 3.14
+        # JS decodes as: 7070651414971679 * 2^(-51) = 3.14
+        result = de.deserialize("^1^F7070651414971679^f-51^^")
+        assert result == 3.14
+
+    def test_float_frexp_format_0_5(self, de):
+        # Matches JS test: 0.5 = frexp gives m=0.5, e=0
+        # int_m = int(0.5 * 2^53) = 4503599627370496, adj_e = 0 - 53 = -53
+        # wire: ^F4503599627370496^f-53
+        result = de.deserialize("^1^F4503599627370496^f-53^^")
+        assert result == 0.5
 
     def test_simple_string(self, de):
         assert de.deserialize("^1^Shello^^") == "hello"
