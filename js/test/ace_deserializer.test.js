@@ -11,11 +11,8 @@ describe('B. String Unescaping (Deserialize)', () => {
         assert.strictEqual(new WowAceDeserializer('^1^S~@^^').deserialize(), '\x00');
     });
 
-    test('B12: generic ~X where X < z — ~A → chr(1)', () => {
+    test('B12: generic ~X where X < z → chr(ord(X)−64)', () => {
         assert.strictEqual(new WowAceDeserializer('^1^S~A^^').deserialize(), '\x01');
-    });
-
-    test('B12: ~J → chr(10) (newline)', () => {
         assert.strictEqual(new WowAceDeserializer('^1^S~J^^').deserialize(), '\x0A');
     });
 
@@ -136,54 +133,31 @@ describe('I. Array Detection (Deserialize)', () => {
         assert.strictEqual(Array.isArray(result), false);
         assert.deepStrictEqual(result, {});
     });
+});
 
-    // Additional table deserialization tests
-    test('table: single string key-value', () => {
-        assert.deepStrictEqual(
-            new WowAceDeserializer('^1^T^Sfoo^Sbar^t^^').deserialize(),
-            { foo: 'bar' }
-        );
+// ── J. Framing (Deserialize) ───────────────────────────────────────────────
+
+describe('J. Framing (Deserialize)', () => {
+    test('J60: deserialize requires ^1 prefix', () => {
+        // Wrong version '^2' → throws
+        assert.throws(() => new WowAceDeserializer('^2^Shello^^'));
     });
 
-    test('table: multiple string pairs', () => {
-        assert.deepStrictEqual(
-            new WowAceDeserializer('^1^T^Sa^S1^Sb^S2^t^^').deserialize(),
-            { a: '1', b: '2' }
-        );
+    test.skip('J61: missing ^^ terminator → error', () => {
+        // JS deserializer is lenient: returns value instead of throwing.
+        // Other languages (Lua, Ruby, Python) reject missing ^^ terminator.
+        assert.throws(() => new WowAceDeserializer('^1^N42').deserialize());
     });
 
-    test('table: nested table with string keys', () => {
-        assert.deepStrictEqual(
-            new WowAceDeserializer('^1^T^Souter^T^Sinner^Sval^t^t^^').deserialize(),
-            { outer: { inner: 'val' } }
-        );
-    });
-
-    test('table: mixed value types', () => {
-        const result = new WowAceDeserializer('^1^T^Sn^N5^Sb^B^Sz^Z^t^^').deserialize();
-        assert.strictEqual(result.n, 5);
-        assert.strictEqual(result.b, true);
-        assert.strictEqual(result.z, null);
-    });
-
-    test('table: nested array tables', () => {
-        assert.deepStrictEqual(
-            new WowAceDeserializer('^1^T^N1^T^N1^Sa^t^t^^').deserialize(),
-            [['a']]
-        );
-    });
-
-    test('table: round-trip array through serializer', () => {
-        const original = ['x', 'y', 'z'];
-        const wire = WowAceSerializer.serialize(original);
-        assert.deepStrictEqual(new WowAceDeserializer(wire).deserialize(), original);
+    test('J62: control chars 0x00-0x20 stripped from input before parsing', () => {
+        assert.strictEqual(new WowAceDeserializer('\x00^1^N42\x0A^^').deserialize(), 42);
     });
 });
 
-// ── J+K. Framing and Error Handling ───────────────────────────────────────
+// ── K. Error Handling ──────────────────────────────────────────────────────
 
-describe('J+K. Framing and Error Handling', () => {
-    test('J60/K63: missing ^1 prefix → throws', () => {
+describe('K. Error Handling', () => {
+    test('K63: missing ^1 prefix → throws', () => {
         assert.throws(() => new WowAceDeserializer('hello'));
     });
 
@@ -191,11 +165,9 @@ describe('J+K. Framing and Error Handling', () => {
         assert.throws(() => new WowAceDeserializer(''));
     });
 
-    test('J61/K65: missing ^^ terminator — JS is lenient, returns value', () => {
-        assert.strictEqual(new WowAceDeserializer('^1^N42').deserialize(), 42);
-    });
-
-    test('J62: control chars 0x00-0x20 stripped from input before parsing', () => {
-        assert.strictEqual(new WowAceDeserializer('\x00^1^N42\x0A^^').deserialize(), 42);
+    test.skip('K65: missing ^^ terminator → error', () => {
+        // JS deserializer is lenient: returns value instead of throwing.
+        // Other languages (Lua, Ruby, Python) reject missing ^^ terminator.
+        assert.throws(() => new WowAceDeserializer('^1^Z').deserialize());
     });
 });

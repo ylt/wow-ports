@@ -9,19 +9,19 @@ RSpec.describe 'LuaDeflate' do
   # ── M. Encode ────────────────────────────────────────────────────────────────
 
   describe 'M. Encode' do
-    it 'M74: 3-byte input → 4 encoded chars (full group)' do
+    it 'M74: 3-byte input → 4 chars (full group)' do
       expect(LuaDeflate.encode_for_print('abc').length).to eq(4)
     end
 
-    it 'M75: 1-byte input → 2 encoded chars (tail)' do
+    it 'M75: 1-byte input → 2 chars (tail)' do
       expect(LuaDeflate.encode_for_print('a').length).to eq(2)
     end
 
-    it 'M76: 2-byte input → 3 encoded chars (tail)' do
+    it 'M76: 2-byte input → 3 chars (tail)' do
       expect(LuaDeflate.encode_for_print('ab').length).to eq(3)
     end
 
-    it 'M77: 6-byte input → 8 encoded chars (two full groups)' do
+    it 'M77: 6-byte input → 8 chars (two full groups)' do
       expect(LuaDeflate.encode_for_print('abcdef').length).to eq(8)
     end
 
@@ -65,11 +65,11 @@ RSpec.describe 'LuaDeflate' do
       expect(LuaDeflate.decode_for_print('a')).to be_nil
     end
 
-    it 'N85: empty string → nil (strlen ≤ 1 after whitespace strip)' do
+    it 'N85: empty string → nil' do
       expect(LuaDeflate.decode_for_print('')).to be_nil
     end
 
-    it 'N86: invalid alphabet character → nil' do
+    it 'N86: invalid character → nil' do
       expect(LuaDeflate.decode_for_print('ab+c')).to be_nil
     end
   end
@@ -94,15 +94,15 @@ RSpec.describe 'LuaDeflate' do
       expect(LuaDeflate.decode_for_print(LuaDeflate.encode_for_print(input))).to eq(input)
     end
 
-    it 'O90: single byte round-trips' do
+    it 'O90: single byte' do
       expect(LuaDeflate.decode_for_print(LuaDeflate.encode_for_print('x'))).to eq('x')
     end
 
-    it 'O91: two bytes round-trip' do
+    it 'O91: two bytes' do
       expect(LuaDeflate.decode_for_print(LuaDeflate.encode_for_print('xy'))).to eq('xy')
     end
 
-    it 'O92: three bytes round-trip (group boundary)' do
+    it 'O92: three bytes (boundary)' do
       expect(LuaDeflate.decode_for_print(LuaDeflate.encode_for_print('xyz'))).to eq('xyz')
     end
 
@@ -114,7 +114,7 @@ RSpec.describe 'LuaDeflate' do
 
   # ── P. Native Variant ────────────────────────────────────────────────────────
 
-  describe 'P. Native Variant (LuaDeflateNative)' do
+  describe 'P. Native Variant' do
     it 'P94: native encode output byte-identical to reference encode' do
       inputs = ['hello', 'abc', 'The quick brown fox', 'x' * 99]
       inputs.each do |input|

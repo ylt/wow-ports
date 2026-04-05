@@ -23,19 +23,19 @@ RSpec.describe 'WowAceSerializer' do
       expect(serialize_str("\x00")).to eq('~@')
     end
 
-    it 'A2a: control char 0x01 → ~A' do
+    it 'A2: control 0x01 → ~A' do
       expect(serialize_str("\x01")).to eq('~A')
     end
 
-    it 'A2b: control char 0x0A (LF) → ~J' do
+    it 'A2: control 0x0A (LF) → ~J' do
       expect(serialize_str("\x0A")).to eq('~J')
     end
 
-    it 'A2c: control char 0x1D → ~]' do
+    it 'A2: control 0x1D → ~]' do
       expect(serialize_str("\x1D")).to eq('~]')
     end
 
-    it 'A3: byte 30 (0x1E) → ~z (SPECIAL CASE: 30+64=94=^ would corrupt parser)' do
+    it 'A3: byte 30 (0x1E) → ~z (special case — 30+64=94=^ would corrupt parser)' do
       expect(serialize_str("\x1E")).to eq('~z')
     end
 
@@ -59,12 +59,12 @@ RSpec.describe 'WowAceSerializer' do
       expect(serialize_str("\x7F")).to eq('~{')
     end
 
-    it 'A9: single-pass — string with multiple special chars does not double-escape' do
+    it 'A9: single-pass — multiple special chars, no double-escaping' do
       result = serialize_str("a^b~c\x7Fd\x1Ee")
       expect(result).to eq('a~}b~|c~{d~ze')
     end
 
-    it 'A10: printable ASCII (0x21–0x5D, 0x5F–0x7D) passes through unescaped' do
+    it 'A10: printable ASCII (0x21-0x5D, 0x5F-0x7D) passes through unescaped' do
       expect(serialize_str('!')).to eq('!')
       expect(serialize_str('A')).to eq('A')
       expect(serialize_str(']')).to eq(']')
@@ -78,11 +78,11 @@ RSpec.describe 'WowAceSerializer' do
       expect(deserialize_str('~@')).to eq("\x00")
     end
 
-    it 'B12a: ~A → chr(1)' do
+    it 'B12: generic ~X where X < z — ~A → chr(1)' do
       expect(deserialize_str('~A')).to eq("\x01")
     end
 
-    it 'B12b: ~J → chr(10)' do
+    it 'B12: ~J → chr(10) (newline)' do
       expect(deserialize_str('~J')).to eq("\x0A")
     end
 
@@ -90,19 +90,19 @@ RSpec.describe 'WowAceSerializer' do
       expect(deserialize_str('~z')).to eq("\x1E")
     end
 
-    it 'B14: ~{ → DEL (127)' do
+    it 'B14: ~{ → DEL (0x7F)' do
       expect(deserialize_str('~{')).to eq("\x7F")
     end
 
-    it 'B15: ~| → tilde (126)' do
+    it 'B15: ~| → tilde (~)' do
       expect(deserialize_str('~|')).to eq('~')
     end
 
-    it 'B16: ~} → caret (94)' do
+    it 'B16: ~} → caret (^)' do
       expect(deserialize_str('~}')).to eq('^')
     end
 
-    it 'B17: round-trip — string with all escapable bytes survives serialize→deserialize' do
+    it 'B17: round-trip — all escapable bytes survive serialize→deserialize' do
       original = "\x00\x01\x0A\x1D\x1E\x1F ^~\x7F"
       expect(s.deserialize(s.serialize(original))).to eq(original)
     end
@@ -127,23 +127,23 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.serialize(1_000_000_000)).to eq('^1^N1000000000^^')
     end
 
-    it 'C22: non-integer float uses ^F path (frexp format)' do
+    it 'C22: non-integer float uses ^F^f format (not ^N)' do
       expect(s.serialize(0.5)).to start_with('^1^F')
     end
 
-    it 'C23: 3.14 exact wire format verification' do
+    it 'C23: 3.14 exact wire format' do
       expect(s.serialize(3.14)).to eq('^1^F7070651414971679^f-51^^')
     end
 
-    it 'C24a: 0.1 uses ^F path' do
+    it 'C24: 0.1 wire format is ^F^f' do
       expect(s.serialize(0.1)).to start_with('^1^F')
     end
 
-    it 'C24b: -99.99 uses ^F path' do
+    it 'C24: -99.99 wire format is ^F^f' do
       expect(s.serialize(-99.99)).to start_with('^1^F')
     end
 
-    it 'C24c: 1e-10 uses ^F path' do
+    it 'C24: 1e-10 wire format is ^F^f' do
       expect(s.serialize(1e-10)).to start_with('^1^F')
     end
 
@@ -169,7 +169,7 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.deserialize('^1^N-42^^')).to eq(-42)
     end
 
-    it 'D29: ^N3.14 → 3.14 (float from ^N path — must handle even though we do not emit it)' do
+    it 'D29: ^N3.14 → 3.14 (float via ^N path)' do
       expect(s.deserialize('^1^N3.14^^')).to eq(3.14)
     end
 
@@ -252,11 +252,11 @@ RSpec.describe 'WowAceSerializer' do
   # ── G. Nil ───────────────────────────────────────────────────────────────────
 
   describe 'G. Nil' do
-    it 'G46: nil → ^Z' do
+    it 'G46: null → ^Z' do
       expect(s.serialize(nil)).to eq('^1^Z^^')
     end
 
-    it 'G47: ^Z → nil' do
+    it 'G47: ^Z → null' do
       expect(s.deserialize('^1^Z^^')).to be_nil
     end
   end
@@ -268,11 +268,11 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.serialize({})).to eq('^1^T^t^^')
     end
 
-    it 'H49: single key-value pair' do
+    it 'H49: single string key-value pair' do
       expect(s.serialize({ 'k' => 'v' })).to eq('^1^T^Sk^Sv^t^^')
     end
 
-    it 'H50: multiple key-value pairs round-trip' do
+    it 'H50: multiple key-value pairs' do
       original = { 'a' => 1, 'b' => 2 }
       expect(s.deserialize(s.serialize(original))).to eq(original)
     end
@@ -281,11 +281,11 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.serialize({ 'x' => { 'y' => 1 } })).to eq('^1^T^Sx^T^Sy^N1^t^t^^')
     end
 
-    it 'H52: array [a,b,c] → ^T with 1-based integer keys' do
+    it 'H52: array [a,b,c] → 1-based integer keys' do
       expect(s.serialize(['a', 'b', 'c'])).to eq('^1^T^N1^Sa^N2^Sb^N3^Sc^t^^')
     end
 
-    it 'H53: mixed table (integer + string keys) round-trip' do
+    it 'H53: mixed table (integer + string keys)' do
       original = { 'name' => 'Alice', 'score' => 100 }
       expect(s.deserialize(s.serialize(original))).to eq(original)
     end
@@ -299,7 +299,7 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.deserialize(wire)).to eq(['a', 'b', 'c'])
     end
 
-    it 'I55: non-sequential integer keys → hash' do
+    it 'I55: non-sequential integer keys → object/hash' do
       wire = '^1^T^N1^Sa^N3^Sc^t^^'
       result = s.deserialize(wire)
       expect(result).to be_a(Hash)
@@ -307,7 +307,7 @@ RSpec.describe 'WowAceSerializer' do
       expect(result[3]).to eq('c')
     end
 
-    it 'I56: string keys → hash (not array)' do
+    it 'I56: string keys → object (not array)' do
       wire = '^1^T^Sname^SAlice^t^^'
       result = s.deserialize(wire)
       expect(result).to be_a(Hash)
@@ -319,7 +319,8 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.deserialize(wire)).to eq(['only'])
     end
 
-    it 'I58: empty table → empty array (Ruby: sequential-check on [] passes, yields [])' do
+    # Ruby: empty table passes sequential-key check → returns [] instead of {}
+    it 'I58: empty table → empty object (not array)' do
       expect(s.deserialize('^1^T^t^^')).to eq([])
     end
   end
@@ -327,21 +328,21 @@ RSpec.describe 'WowAceSerializer' do
   # ── J. Framing ───────────────────────────────────────────────────────────────
 
   describe 'J. Framing' do
-    it 'J59: serialize wraps with ^1 prefix and ^^ terminator' do
+    it 'J59: serialize output starts with ^1 and ends with ^^' do
       result = s.serialize('test')
       expect(result).to start_with('^1')
       expect(result).to end_with('^^')
     end
 
-    it 'J60: deserialize requires ^1 prefix' do
+    it 'J60/K63: missing ^1 prefix → raises error' do
       expect { s.deserialize('^N42^^') }.to raise_error(RuntimeError, 'Invalid prefix')
     end
 
-    it 'J61: deserialize with missing ^^ terminator handles gracefully (no crash)' do
+    it 'J61/K65: missing ^^ terminator — Ruby is lenient, returns value' do
       expect { s.deserialize('^1^N42') }.not_to raise_error
     end
 
-    it 'J62: deserialize strips control chars (0x00–0x20) from input' do
+    it 'J62: control chars 0x00-0x20 stripped from input before parsing' do
       wire = "\x01\x05\x0A^1^N42^^"
       expect(s.deserialize(wire)).to eq(42)
     end
@@ -361,6 +362,7 @@ RSpec.describe 'WowAceSerializer' do
     it 'K65: missing ^^ terminator → no crash (graceful handling)' do
       expect { s.deserialize('^1^Shello') }.not_to raise_error
     end
+
   end
 
   # ── L. Round-trips (serialize→deserialize identity) ─────────────────────────
@@ -383,12 +385,12 @@ RSpec.describe 'WowAceSerializer' do
       expect(s.deserialize(s.serialize(3.14))).to eq(3.14)
     end
 
-    it 'L70: boolean' do
+    it 'L70: boolean true' do
       expect(s.deserialize(s.serialize(true))).to eq(true)
       expect(s.deserialize(s.serialize(false))).to eq(false)
     end
 
-    it 'L71: nil' do
+    it 'L71: null (nil)' do
       expect(s.deserialize(s.serialize(nil))).to be_nil
     end
 
