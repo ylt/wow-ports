@@ -21,10 +21,16 @@ module WowAceSerialization
   end
 
   def serialize_string(str)
-    escaped = str.gsub(/[\x00-\x20]/) { |m| "~#{(m.ord + 64).chr}" }
-                 .gsub('^', '~U')
-                 .gsub('~', '~T')
-                 .gsub("\x7F", '~S')
+    escaped = str.gsub(/[\x00-\x20\x5E\x7E\x7F]/) do |m|
+      byte = m.ord
+      case byte
+      when 0x1E then '~z'
+      when 0x5E then '~}'
+      when 0x7E then '~|'
+      when 0x7F then '~{'
+      else "~#{(byte + 64).chr}"
+      end
+    end
     "^S#{escaped}"
   end
 
@@ -94,11 +100,13 @@ module WowAceDeserialization
     string_end = data.index(/(?=\^[\wZbt])/) || data.length
     string_data = data.slice!(0, string_end)
     string_data.gsub!(/~(.)/) do
-      case ::Regexp.last_match(1)
-      when 'U' then '^'
-      when 'T' then '~'
-      when 'S' then "\x7F"
-      else (::Regexp.last_match(1).ord - 64).chr
+      c = ::Regexp.last_match(1)
+      case c.ord
+      when 0...122 then (c.ord - 64).chr  # generic: chr(byte - 64)
+      when 122 then "\x1E"                # ~z → byte 30
+      when 123 then "\x7F"               # ~{ → DEL
+      when 124 then '~'                   # ~| → ~
+      when 125 then '^'                   # ~} → ^
       end
     end
     string_data

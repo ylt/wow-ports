@@ -26,25 +26,41 @@ class WowAceSerializer {
 
     // Serialization helpers
     static _serializeString(str) {
-        const escaped = str.replace(/[\x00-\x20]/g, m => `~${String.fromCharCode(m.charCodeAt(0) + 64)}`)
-            .replace('^', '~U')
-            .replace('~', '~T')
-            .replace("\x7F", '~S');
+        const escaped = str.replace(/[\x00-\x20\x5E\x7E\x7F]/g, m => {
+            const byte = m.charCodeAt(0);
+            if (byte === 0x1E) return '~z';
+            if (byte === 0x5E) return '~}';
+            if (byte === 0x7E) return '~|';
+            if (byte === 0x7F) return '~{';
+            return `~${String.fromCharCode(byte + 64)}`;
+        });
         return `^S${escaped}`;
+    }
+
+    static _frexp(value) {
+        if (value === 0) return [0, 0];
+        const data = new DataView(new ArrayBuffer(8));
+        data.setFloat64(0, value);
+        const bits = (data.getUint32(0) >>> 20) & 0x7FF;
+        if (bits === 0) {
+            data.setFloat64(0, value * Math.pow(2, 64));
+            const bits2 = (data.getUint32(0) >>> 20) & 0x7FF;
+            return [value * Math.pow(2, 64 - bits2 + 1022), bits2 - 1022 - 64];
+        }
+        return [value / Math.pow(2, bits - 1022), bits - 1022];
     }
 
     static _serializeNumber(num) {
         if (!isFinite(num)) {
             return num > 0 ? '^N1.#INF' : '^N-1.#INF';
         }
-        // Handle integer and float differentiation
         if (Number.isInteger(num)) {
             return `^N${num}`;
         } else {
-            const data = new Float64Array(1);
-            data[0] = num;
-            const [mantissa, exponent] = [data[0] * Math.pow(2, 53), 53]; // Using ES6 destructuring
-            return `^F${mantissa}^f${exponent}`;
+            const [m, e] = this._frexp(num);
+            const int_mantissa = Math.floor(m * Math.pow(2, 53));
+            const adj_exponent = e - 53;
+            return `^F${int_mantissa}^f${adj_exponent}`;
         }
     }
 

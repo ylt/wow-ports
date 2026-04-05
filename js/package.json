@@ -3,7 +3,5 @@
   "version": "1.0.0",
   "main": "lib/LuaDeflate.js",
   "license": "ISC",
-  "dependencies": {
-    "streader": "^1.0.1"
-  }
+  "dependencies": {}
 }

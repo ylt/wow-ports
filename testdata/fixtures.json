@@ -1,0 +1,203 @@
+{
+  "ace_serializer": [
+    {
+      "name": "simple string hello",
+      "input": "hello",
+      "ace_serialized": "^1^Shello^^"
+    },
+    {
+      "name": "empty string",
+      "input": "",
+      "ace_serialized": "^1^S^^"
+    },
+    {
+      "name": "string with caret",
+      "input": "a^b",
+      "ace_serialized": "^1^Sa~}b^^"
+    },
+    {
+      "name": "string with tilde",
+      "input": "a~b",
+      "ace_serialized": "^1^Sa~|b^^"
+    },
+    {
+      "name": "string with DEL (0x7F)",
+      "input": "a\u007fb",
+      "ace_serialized": "^1^Sa~{b^^"
+    },
+    {
+      "name": "string with byte 30 (0x1E)",
+      "input": "a\u001eb",
+      "ace_serialized": "^1^Sa~zb^^"
+    },
+    {
+      "name": "string with space",
+      "input": "a b",
+      "ace_serialized": "^1^Sa~`b^^"
+    },
+    {
+      "name": "string with NUL byte (0x00)",
+      "input": "a\u0000b",
+      "ace_serialized": "^1^Sa~@b^^"
+    },
+    {
+      "name": "string with tab (0x09)",
+      "input": "a\tb",
+      "ace_serialized": "^1^Sa~Ib^^"
+    },
+    {
+      "name": "string with CR (0x0D)",
+      "input": "a\rb",
+      "ace_serialized": "^1^Sa~Mb^^"
+    },
+    {
+      "name": "string with byte 31 (0x1F)",
+      "input": "a\u001fb",
+      "ace_serialized": "^1^Sa~_b^^"
+    },
+    {
+      "name": "string with all special chars combined",
+      "input": "^\u007e\u007f\u001e ",
+      "ace_serialized": "^1^S~}~|~{~z~`^^",
+      "note": "caret, tilde, DEL, byte30, space all escaped in one pass"
+    },
+    {
+      "name": "integer 42",
+      "input": 42,
+      "ace_serialized": "^1^N42^^"
+    },
+    {
+      "name": "negative integer -42",
+      "input": -42,
+      "ace_serialized": "^1^N-42^^"
+    },
+    {
+      "name": "zero",
+      "input": 0,
+      "ace_serialized": "^1^N0^^"
+    },
+    {
+      "name": "large integer",
+      "input": 1000000,
+      "ace_serialized": "^1^N1000000^^"
+    },
+    {
+      "name": "float 3.14",
+      "input": { "__type__": "float", "value": 3.14 },
+      "ace_serialized": "^1^F7070651414971679^f-51^^",
+      "note": "frexp(3.14): mantissa=7070651414971679, adj_exponent=-51"
+    },
+    {
+      "name": "float 0.1",
+      "input": { "__type__": "float", "value": 0.1 },
+      "ace_serialized": "^1^F7205759403792794^f-56^^",
+      "note": "frexp(0.1): mantissa=7205759403792794, adj_exponent=-56"
+    },
+    {
+      "name": "float -99.99",
+      "input": { "__type__": "float", "value": -99.99 },
+      "ace_serialized": "^1^F-7036170730324623^f-46^^",
+      "note": "frexp(-99.99): mantissa=-7036170730324623, adj_exponent=-46"
+    },
+    {
+      "name": "positive infinity",
+      "input": { "__type__": "infinity" },
+      "ace_serialized": "^1^N1.#INF^^"
+    },
+    {
+      "name": "negative infinity",
+      "input": { "__type__": "neg_infinity" },
+      "ace_serialized": "^1^N-1.#INF^^"
+    },
+    {
+      "name": "boolean true",
+      "input": true,
+      "ace_serialized": "^1^B^^"
+    },
+    {
+      "name": "boolean false",
+      "input": false,
+      "ace_serialized": "^1^b^^"
+    },
+    {
+      "name": "null",
+      "input": null,
+      "ace_serialized": "^1^Z^^"
+    },
+    {
+      "name": "simple array of two strings",
+      "input": ["a", "b"],
+      "ace_serialized": "^1^T^N1^Sa^N2^Sb^t^^",
+      "serialize_deterministic": true
+    },
+    {
+      "name": "array of three mixed values",
+      "input": ["hello", 42, true],
+      "ace_serialized": "^1^T^N1^Shello^N2^N42^N3^B^t^^",
+      "serialize_deterministic": true
+    },
+    {
+      "name": "nested array",
+      "input": [["a", "b"], "c"],
+      "ace_serialized": "^1^T^N1^T^N1^Sa^N2^Sb^t^N2^Sc^t^^",
+      "serialize_deterministic": true
+    },
+    {
+      "name": "array with null values",
+      "input": [null, null, null, "test"],
+      "ace_serialized": "^1^T^N1^Z^N2^Z^N3^Z^N4^Stest^t^^",
+      "serialize_deterministic": true
+    },
+    {
+      "name": "nested structure from protocol spec",
+      "input": { "hello": "world", "test": 123, "nested": [null, null, null, "test"] },
+      "ace_serialized": "^1^T^Shello^Sworld^Stest^N123^Snested^T^N1^Z^N2^Z^N3^Z^N4^Stest^t^t^^",
+      "serialize_deterministic": false,
+      "note": "Key order is non-deterministic for string-keyed tables; test deserialization only"
+    },
+    {
+      "name": "mixed table string and integer keys",
+      "input": { "hello": "world", "n": 42 },
+      "ace_serialized": "^1^T^Shello^Sworld^Sn^N42^t^^",
+      "serialize_deterministic": false,
+      "note": "Key order is non-deterministic; test deserialization only"
+    }
+  ],
+  "lua_deflate": [
+    {
+      "name": "single null byte",
+      "input_hex": "00",
+      "encoded": "aa"
+    },
+    {
+      "name": "single 0xFF byte",
+      "input_hex": "ff",
+      "encoded": ")d"
+    },
+    {
+      "name": "three bytes filling one group",
+      "input_hex": "000102",
+      "encoded": "aeGa"
+    },
+    {
+      "name": "hello string (5 bytes, 1 full group + 1 partial)",
+      "input_hex": "68656c6c6f",
+      "encoded": "OvgBS9g"
+    },
+    {
+      "name": "ABC string (3 bytes, one full group)",
+      "input_hex": "414243",
+      "encoded": "bj0q"
+    },
+    {
+      "name": "six bytes (two full groups)",
+      "input_hex": "000102030405",
+      "encoded": "aeGadqqb"
+    },
+    {
+      "name": "two bytes (partial group, 3 encoded chars)",
+      "input_hex": "4143",
+      "encoded": "bne"
+    }
+  ]
+}
