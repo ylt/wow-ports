@@ -252,32 +252,31 @@ class LibSerializeDeserializer:
         raise ValueError(f"Unknown type in reader table: {typ}")
 
     def _read_table(self, entry_count: int, value: dict | None = None) -> dict:
-        if value is None:
+        is_new = value is None
+        if is_new:
             value = {}
-        self._add_reference(self._table_refs, value)
+            self._add_reference(self._table_refs, value)
         for _ in range(entry_count):
             k = self._read_object()
             v = self._read_object()
             value[k] = v
         return value
 
-    def _read_array(self, entry_count: int, value: list | None = None) -> list:
-        if value is None:
-            value = []
-        self._add_reference(self._table_refs, value)
+    def _read_array(self, entry_count: int, value: dict | None = None) -> dict:
+        is_new = value is None
+        if is_new:
+            value = {}
+            self._add_reference(self._table_refs, value)
         for i in range(entry_count):
-            if i < len(value):
-                value[i] = self._read_object()
-            else:
-                value.append(self._read_object())
+            value[i + 1] = self._read_object()
         return value
 
     def _read_mixed(self, array_count: int, map_count: int) -> dict:
         value: dict = {}
         self._add_reference(self._table_refs, value)
-        array_values = self._read_array(array_count)
-        # 1-based keys for array portion (matches Ruby fix)
-        value.update({i + 1: v for i, v in enumerate(array_values)})
+        # Inline array reading — do NOT call _read_array (it would add a spurious table ref)
+        for i in range(array_count):
+            value[i + 1] = self._read_object()
         self._read_table(map_count, value)
         return value
 
@@ -478,11 +477,21 @@ class LibSerializeSerializer:
             self._write_byte(ref_type << 3)
             self._write_int(ref, required_bytes)
         else:
-            length = len(data)
-            self._write_type_with_count("TABLE", length)
-            for k, v in data.items():
-                self._write_object(k)
-                self._write_object(v)
+            keys = list(data.keys())
+            length = len(keys)
+            # Detect Lua-style array: sequential 1-based integer keys (int or str)
+            if length > 0 and all(
+                (isinstance(k, int) and k == i + 1) or (isinstance(k, str) and k == str(i + 1))
+                for i, k in enumerate(keys)
+            ):
+                self._write_type_with_count("ARRAY", length)
+                for k in keys:
+                    self._write_object(data[k])
+            else:
+                self._write_type_with_count("TABLE", length)
+                for k, v in data.items():
+                    self._write_object(k)
+                    self._write_object(v)
             if length > 2:
                 self._object_refs[key] = len(self._object_refs) + 1
 

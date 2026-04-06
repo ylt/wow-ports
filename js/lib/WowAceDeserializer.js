@@ -87,7 +87,11 @@ class WowAceDeserializer {
         const stringData = this.stream.readPattern(/^[^^]*/);
         return stringData.replace(/~(.)/g, (match, char) => {
             const code = char.charCodeAt(0);
-            if (code < 122) return String.fromCharCode(code - 64);
+            if (code < 122) {
+                const byte = code - 64;
+                if (byte < 0) throw new Error(`Invalid escape sequence: ~${char}`);
+                return String.fromCharCode(byte);
+            }
             switch (char) {
                 case 'z': return '\x1E';
                 case '{': return '\x7F';

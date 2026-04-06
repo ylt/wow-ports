@@ -197,8 +197,9 @@ class LibSerializeDeserialize < LibSerialize
   end
 
   def read_table(entry_count, value = nil)
+    is_new = value.nil?
     value ||= {}
-    add_reference(@table_refs, value)
+    add_reference(@table_refs, value) if is_new
 
     entry_count.times do
       k, v = read_pair(method(:read_object))
@@ -209,11 +210,12 @@ class LibSerializeDeserialize < LibSerialize
   end
 
   def read_array(entry_count, value = nil)
-    value ||= []
-    add_reference(@table_refs, value)
+    is_new = value.nil?
+    value ||= {}
+    add_reference(@table_refs, value) if is_new
 
     entry_count.times do |i|
-      value[i] = read_object
+      value[i + 1] = read_object
     end
 
     value
@@ -223,8 +225,10 @@ class LibSerializeDeserialize < LibSerialize
     value = {}
     add_reference(@table_refs, value)
 
-    array_values = read_array(array_count)
-    value.merge!(Hash[array_values.map.with_index(1) { |v, i| [i, v] }])
+    # Inline array reading — do NOT call read_array (it would add a spurious table ref)
+    array_count.times do |i|
+      value[i + 1] = read_object
+    end
 
     read_table(map_count, value)
 
@@ -517,11 +521,18 @@ class LibSerializeSerialize < LibSerialize
       write_byte(ref_type << 3)
       write_int(ref, required_bytes)
     else
-      len = data.length
-      write_type_with_count(:TABLE, len)
-      data.each do |key, value|
-        write_object(key)
-        write_object(value)
+      keys = data.keys
+      len = keys.length
+      # Detect Lua-style array: sequential 1-based integer keys (int or string)
+      if len > 0 && keys.each_with_index.all? { |k, i| (k.is_a?(Integer) && k == i + 1) || (k.is_a?(String) && k == (i + 1).to_s) }
+        write_type_with_count(:ARRAY, len)
+        keys.each { |k| write_object(data[k]) }
+      else
+        write_type_with_count(:TABLE, len)
+        data.each do |key, value|
+          write_object(key)
+          write_object(value)
+        end
       end
       @object_refs[data.object_id] = @object_refs.count + 1 if len > 2
     end

@@ -1,3 +1,5 @@
 node_modules/
 .omc/
 lua/deps/
+__pycache__/
+*.pyc

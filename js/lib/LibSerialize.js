@@ -173,10 +173,10 @@ class LibSerializeDeserialize {
   }
 
   readArray(count) {
-    const arr = [];
-    this.table_refs.push(arr);
-    for (let i = 0; i < count; i++) arr[i] = this.readObject();
-    return arr;
+    const obj = {};
+    this.table_refs.push(obj);
+    for (let i = 0; i < count; i++) obj[i + 1] = this.readObject();
+    return obj;
   }
 
   // readMixed: 1-based integer keys for array portion (bug fix vs Ruby 0-based)
@@ -336,12 +336,18 @@ class LibSerializeSerialize {
       this.writeByte(TABLE_REF_TYPE[reqBytes] << 3);
       this.writeInt(ref, reqBytes);
     } else {
-      const entries = Object.entries(obj);
-      const len     = entries.length;
-      this.writeTypeWithCount(EMB_TABLE, TABLE_TYPE, len);
-      for (const [k, v] of entries) {
-        this.writeObject(k);
-        this.writeObject(v);
+      const keys = Object.keys(obj);
+      const len  = keys.length;
+      // Detect Lua-style array: sequential 1-based integer keys
+      if (len > 0 && keys.every((k, i) => k === String(i + 1))) {
+        this.writeTypeWithCount(EMB_ARRAY, ARRAY_TYPE, len);
+        for (const k of keys) this.writeObject(obj[k]);
+      } else {
+        this.writeTypeWithCount(EMB_TABLE, TABLE_TYPE, len);
+        for (const [k, v] of Object.entries(obj)) {
+          this.writeObject(k);
+          this.writeObject(v);
+        }
       }
       if (len > 2) this.object_refs.set(obj, this.object_refs.size + 1);
     }

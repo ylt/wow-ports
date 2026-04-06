@@ -57,10 +57,9 @@ class WowAceSerializer {
         if (Number.isInteger(num)) {
             return `^N${num}`;
         }
-        // Lua-compatible: if float survives string round-trip, use ^N (simpler path)
-        const str = String(num);
-        if (parseFloat(str) === num) {
-            return `^N${str}`;
+        // Lua uses %.14g for tostring() — only use ^N if 14-digit precision roundtrips
+        if (parseFloat(num.toPrecision(14)) === num) {
+            return `^N${num}`;
         }
         const [m, e] = this._frexp(num);
         const int_mantissa = Math.floor(m * Math.pow(2, 53));

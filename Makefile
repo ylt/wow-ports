@@ -1,6 +1,6 @@
 PYTHON := uv run
 
-.PHONY: test test-js test-ruby test-python test-lua install install-js install-ruby install-python install-lua
+.PHONY: test test-js test-ruby test-python test-lua install install-js install-ruby install-python install-lua generate-tests
 
 test: test-js test-ruby test-python test-lua
 
@@ -29,3 +29,6 @@ install-python:
 
 install-lua:
 	./lua/fetch-deps.sh
+
+generate-tests:
+	cd scripts && uv run generate-tests.py
