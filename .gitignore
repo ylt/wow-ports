@@ -3,4 +3,5 @@ node_modules/
 lua/deps/
 __pycache__/
 *.pyc
+*.egg-info/
 testdata/samples/

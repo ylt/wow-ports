@@ -2,22 +2,21 @@
 Pipeline — encode/decode WoW addon export strings.
 
 Each format declares its prefix and an ordered list of processing steps.
-Decode runs the steps left→right; encode runs them right→left, using
-each step's inverse operation.
-
-Callers can pass custom steps, or use addon='mdt' for named lookup.
+Decode runs the steps left→right; encode runs them right→left.
+Heuristic detection probes each layer to auto-detect unknown formats.
 """
 
 import base64
 import re
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from .lua_deflate import decode_for_print, encode_for_print
 from .ace_serializer import WowAce as _WowAce
 from .lib_serialize import deserialize as lib_deserialize, serialize as lib_serialize
 from .lib_compress import decompress as lib_compress_decompress
+from .vuhdo_serializer import deserialize as vuhdo_deserialize, serialize as vuhdo_serialize
 
 _ace = _WowAce()
 
@@ -33,7 +32,7 @@ class ExportResult:
     version: int
     data: Any
     metadata: Optional[dict]
-    steps: Optional[list] = None
+    steps: Optional[list] = field(default=None)
 
 
 # ── Step registry ────────────────────────────────────────────────────────────
@@ -48,6 +47,7 @@ STEPS = {
     'ace_serializer':  ('deserialize_ace',           'serialize_ace'),
     'lib_serialize':   ('deserialize_lib_serialize', 'serialize_lib_serialize'),
     'cbor':            ('deserialize_cbor',          'serialize_cbor'),
+    'vuhdo':           ('deserialize_vuhdo',         'serialize_vuhdo'),
 }
 
 # ── Format definitions ───────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ FORMATS = {
     'dbm':       ['encode_for_print', 'zlib', 'lib_serialize'],
     'mdt':       ['encode_for_print', 'lib_compress', 'ace_serializer'],
     'totalrp3':  [{'prefix': '!'}, 'encode_for_print', 'zlib', 'ace_serializer'],
-    'vuhdo':     ['base64', 'lib_compress'],
+    'vuhdo':     ['base64', 'lib_compress', 'vuhdo'],
 }
 
 
@@ -95,6 +95,67 @@ def _run_steps(pipeline, steps, direction: str):
             getattr(pipeline, _resolve(name, direction))(arg)
         else:
             getattr(pipeline, _resolve(step, direction))()
+
+
+# ── Heuristic detection ──────────────────────────────────────────────────────
+
+def detect_steps(export_str: str) -> list:
+    raw = export_str.strip()
+    steps = []
+
+    # Layer 1: prefix
+    bang_match = re.match(r'^![A-Z][\w:]*!', raw)
+    colon_match = re.match(r'^[A-Z]+\d*:', raw)
+    if bang_match:
+        steps.append({'prefix': bang_match.group(0)})
+        raw = raw[bang_match.end():]
+    elif colon_match:
+        steps.append({'prefix': colon_match.group(0)})
+        raw = raw[colon_match.end():]
+    elif raw.startswith('!'):
+        steps.append({'prefix': '!'})
+        raw = raw[1:]
+
+    # Layer 2: encoding (character set)
+    if re.fullmatch(r'[a-zA-Z0-9()]+', raw):
+        steps.append('encode_for_print')
+        raw = decode_for_print(raw)
+    elif re.fullmatch(r'[A-Za-z0-9+/=]+', raw):
+        steps.append('base64')
+        raw = base64.b64decode(raw)
+    elif raw.startswith(('{', '[')):
+        return steps
+    else:
+        return steps
+
+    if not raw or len(raw) == 0:
+        return steps
+
+    # Layer 3: compression
+    first_byte = raw[0] if isinstance(raw, (bytes, bytearray)) else ord(raw[0])
+    if first_byte in (1, 2, 3):
+        steps.append('lib_compress')
+        raw = lib_compress_decompress(raw)
+    else:
+        try:
+            raw = zlib.decompress(raw, wbits=-zlib.MAX_WBITS)
+            steps.append('zlib')
+        except zlib.error:
+            return steps
+
+    # Layer 4: serializer
+    text = raw.decode('latin-1') if isinstance(raw, bytes) else raw
+    first = raw[0] if isinstance(raw, (bytes, bytearray)) else ord(raw[0])
+    if text.startswith('^1'):
+        if '^^::' in text:
+            steps.append('metadata')
+        steps.append('ace_serializer')
+    elif first == 1:
+        steps.append('lib_serialize')
+    elif (first >> 5) in (4, 5):
+        steps.append('cbor')
+
+    return steps
 
 
 class Pipeline:
@@ -123,7 +184,7 @@ class Pipeline:
                     raise ValueError(f"Unknown addon: {addon}")
                 p.addon = addon
             else:
-                steps = cls.detect_steps(export_str)
+                steps = detect_steps(export_str)
                 if not steps:
                     raise ValueError('Could not detect format')
                 pfx_step = next((s for s in steps if isinstance(s, dict) and 'prefix' in s), None)
@@ -161,66 +222,7 @@ class Pipeline:
         _run_steps(p, list(reversed(steps)), 'encode')
         return p.to_string()
 
-    # ── Format detection ──────────────────────────────────────────────────────
-
-    @classmethod
-    def detect_steps(cls, export_str: str) -> list:
-        raw = export_str.strip()
-        steps = []
-
-        # Layer 1: prefix
-        bang_match = re.match(r'^![A-Z][\w:]*!', raw)
-        colon_match = re.match(r'^[A-Z]+\d*:', raw)
-        if bang_match:
-            steps.append({'prefix': bang_match.group(0)})
-            raw = raw[bang_match.end():]
-        elif colon_match:
-            steps.append({'prefix': colon_match.group(0)})
-            raw = raw[colon_match.end():]
-        elif raw.startswith('!'):
-            steps.append({'prefix': '!'})
-            raw = raw[1:]
-
-        # Layer 2: encoding (character set)
-        if re.fullmatch(r'[a-zA-Z0-9()]+', raw):
-            steps.append('encode_for_print')
-            raw = decode_for_print(raw)
-        elif re.fullmatch(r'[A-Za-z0-9+/=]+', raw):
-            steps.append('base64')
-            raw = base64.b64decode(raw)
-        elif raw.startswith(('{', '[')):
-            return steps  # raw JSON
-        else:
-            return steps  # plaintext or unknown
-
-        if not raw or len(raw) == 0:
-            return steps
-
-        # Layer 3: compression
-        first_byte = raw[0] if isinstance(raw, (bytes, bytearray)) else ord(raw[0])
-        if first_byte in (1, 2, 3):
-            steps.append('lib_compress')
-            raw = lib_compress_decompress(raw)
-        else:
-            try:
-                raw = zlib.decompress(raw, wbits=-zlib.MAX_WBITS)
-                steps.append('zlib')
-            except zlib.error:
-                return steps  # unknown compression
-
-        # Layer 4: serializer
-        text = raw.decode('latin-1') if isinstance(raw, bytes) else raw
-        first = raw[0] if isinstance(raw, (bytes, bytearray)) else ord(raw[0])
-        if text.startswith('^1'):
-            if '^^::' in text:
-                steps.append('metadata')
-            steps.append('ace_serializer')
-        elif first == 1:
-            steps.append('lib_serialize')
-        elif (first >> 5) in (4, 5):
-            steps.append('cbor')  # CBOR map or array
-
-        return steps
+    # ── Format detection (legacy) ─────────────────────────────────────────────
 
     def detect_format(self) -> 'Pipeline':
         self.format = next(
@@ -292,6 +294,11 @@ class Pipeline:
         self.data = _ace.deserialize(self.serialized.decode('latin-1'))
         return self
 
+    def deserialize_vuhdo(self) -> 'Pipeline':
+        text = self.serialized.decode('latin-1') if isinstance(self.serialized, bytes) else self.serialized
+        self.data = vuhdo_deserialize(text)
+        return self
+
     def result(self) -> ExportResult:
         return ExportResult(addon=self.addon, version=self.version,
                             data=self.data, metadata=self.metadata,
@@ -311,6 +318,10 @@ class Pipeline:
 
     def serialize_ace(self) -> 'Pipeline':
         self.serialized = _ace.serialize(self.data).encode('latin-1')
+        return self
+
+    def serialize_vuhdo(self) -> 'Pipeline':
+        self.serialized = vuhdo_serialize(self.data).encode('latin-1')
         return self
 
     def compress(self) -> 'Pipeline':

@@ -7,6 +7,7 @@ require_relative 'lua_deflate'
 require_relative 'wowace'
 require_relative 'lib_serialize'
 require_relative 'lib_compress'
+require_relative 'vuhdo_serializer'
 require_relative 'wow_cbor'
 
 ExportResult = Struct.new(:addon, :version, :data, :metadata, :steps)
@@ -27,6 +28,7 @@ class Pipeline
     ace_serializer:  %i[deserialize_ace      serialize_ace],
     lib_serialize:   %i[deserialize_lib_serialize serialize_lib_serialize],
     cbor:            %i[deserialize_cbor     serialize_cbor],
+    vuhdo:           %i[deserialize_vuhdo   serialize_vuhdo],
   }.freeze
 
   # ── Format definitions ────────────────────────────────────────────────────
@@ -56,7 +58,7 @@ class Pipeline
     'dbm'       => %i[encode_for_print zlib lib_serialize],
     'mdt'       => %i[encode_for_print lib_compress ace_serializer],
     'totalrp3'  => [{ prefix: '!' }, :encode_for_print, :zlib, :ace_serializer],
-    'vuhdo'     => %i[base64 lib_compress],
+    'vuhdo'     => %i[base64 lib_compress vuhdo],
   }.freeze
 
   # ── Constructor ───────────────────────────────────────────────────────────
@@ -318,6 +320,11 @@ class Pipeline
     self
   end
 
+  def deserialize_vuhdo
+    @data = VuhDoSerializer.deserialize(@serialized.force_encoding('UTF-8'))
+    self
+  end
+
   def result
     ExportResult.new(@addon, @version, @data, @metadata, @steps)
   end
@@ -336,6 +343,11 @@ class Pipeline
 
   def serialize_ace
     @serialized = WowAceSerializer.new.serialize(@data)
+    self
+  end
+
+  def serialize_vuhdo
+    @serialized = VuhDoSerializer.serialize(@data)
     self
   end
 

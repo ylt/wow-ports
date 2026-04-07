@@ -4,6 +4,7 @@ const LuaDeflate = require('./LuaDeflate');
 const WowAceDeserializer = require('./WowAceDeserializer');
 const WowAceSerializer = require('./WowAceSerializer');
 const LibCompress = require('./LibCompress');
+const VuhDoSerializer = require('./VuhDoSerializer');
 
 let LibSerializeDeserialize, LibSerializeSerialize;
 try {
@@ -27,6 +28,7 @@ const STEPS = {
     ace_serializer:  ['deserialize_ace',           'serialize_ace'],
     lib_serialize:   ['deserialize_lib_serialize', 'serialize_lib_serialize'],
     cbor:            ['deserialize_cbor',          'serialize_cbor'],
+    vuhdo:           ['deserialize_vuhdo',         'serialize_vuhdo'],
 };
 
 // ── Format definitions ─────────────────────────────────────────────────────
@@ -52,7 +54,7 @@ const FORMATS = {
     dbm:       ['encode_for_print', 'zlib', 'lib_serialize'],
     mdt:       ['encode_for_print', 'lib_compress', 'ace_serializer'],
     totalrp3:  [{ prefix: '!' }, 'encode_for_print', 'zlib', 'ace_serializer'],
-    vuhdo:     ['base64', 'lib_compress'],
+    vuhdo:     ['base64', 'lib_compress', 'vuhdo'],
 };
 
 function resolve(step, direction) {
@@ -76,6 +78,72 @@ function runSteps(pipeline, steps, direction) {
     }
 }
 
+// ── Heuristic detection ────────────────────────────────────────────────────
+
+function detectSteps(exportStr) {
+    let raw = exportStr.trim();
+    const steps = [];
+
+    // Layer 1: prefix
+    const bangMatch = raw.match(/^![A-Z][\w:]*!/);
+    const colonMatch = raw.match(/^[A-Z]+\d*:/);
+    if (bangMatch) {
+        steps.push({ prefix: bangMatch[0] });
+        raw = raw.slice(bangMatch[0].length);
+    } else if (colonMatch) {
+        steps.push({ prefix: colonMatch[0] });
+        raw = raw.slice(colonMatch[0].length);
+    } else if (raw.startsWith('!')) {
+        steps.push({ prefix: '!' });
+        raw = raw.slice(1);
+    }
+
+    // Layer 2: encoding (character set)
+    const EFP = /^[a-zA-Z0-9()]+$/;
+    const B64 = /^[A-Za-z0-9+/=]+$/;
+    if (EFP.test(raw)) {
+        steps.push('encode_for_print');
+        raw = luaDeflate.decodeForPrint(raw);
+    } else if (B64.test(raw)) {
+        steps.push('base64');
+        raw = Buffer.from(raw, 'base64').toString('binary');
+    } else if (raw.startsWith('{') || raw.startsWith('[')) {
+        return steps;
+    } else {
+        return steps;
+    }
+
+    if (!raw || raw.length === 0) return steps;
+
+    // Layer 3: compression
+    const firstByte = typeof raw === 'string' ? raw.charCodeAt(0) : raw[0];
+    if (firstByte >= 1 && firstByte <= 3) {
+        steps.push('lib_compress');
+        const buf = Buffer.from(raw, 'binary');
+        raw = LibCompress.decompress(buf).toString('binary');
+    } else {
+        try {
+            raw = zlib.inflateRawSync(Buffer.from(raw, 'binary')).toString('binary');
+            steps.push('zlib');
+        } catch (_) {
+            return steps;
+        }
+    }
+
+    // Layer 4: serializer
+    const first = raw.charCodeAt(0);
+    if (raw.startsWith('^1')) {
+        if (raw.includes('^^::')) steps.push('metadata');
+        steps.push('ace_serializer');
+    } else if (first === 1) {
+        steps.push('lib_serialize');
+    } else if ((first >> 5) === 5 || (first >> 5) === 4) {
+        steps.push('cbor');
+    }
+
+    return steps;
+}
+
 class Pipeline {
     constructor(raw) {
         this.raw      = raw;
@@ -86,6 +154,7 @@ class Pipeline {
         this.compressed  = null;
         this.serialized  = null;
         this.data        = null;
+        this._steps      = null;
     }
 
     static from_result(exportResult) {
@@ -107,9 +176,8 @@ class Pipeline {
                 if (!steps) throw new Error(`Unknown addon: ${addon}`);
                 p.addon = addon;
             } else {
-                steps = Pipeline.detectSteps(exportStr);
+                steps = detectSteps(exportStr);
                 if (!steps.length) throw new Error('Could not detect format');
-                // Infer addon from prefix
                 const pfxStep = steps.find(s => typeof s === 'object' && s.prefix);
                 if (pfxStep) {
                     const match = AUTO_FORMATS.find(f => f.prefix === pfxStep.prefix);
@@ -142,73 +210,7 @@ class Pipeline {
         return p.to_string();
     }
 
-    // ── Heuristic detection ──────────────────────────────────────────────────
-
-    static detectSteps(exportStr) {
-        let raw = exportStr.trim();
-        const steps = [];
-
-        // Layer 1: prefix
-        const bangMatch = raw.match(/^![A-Z][\w:]*!/);
-        const colonMatch = raw.match(/^[A-Z]+\d*:/);
-        if (bangMatch) {
-            steps.push({ prefix: bangMatch[0] });
-            raw = raw.slice(bangMatch[0].length);
-        } else if (colonMatch) {
-            steps.push({ prefix: colonMatch[0] });
-            raw = raw.slice(colonMatch[0].length);
-        } else if (raw.startsWith('!')) {
-            steps.push({ prefix: '!' });
-            raw = raw.slice(1);
-        }
-
-        // Layer 2: encoding (character set)
-        const EFP = /^[a-zA-Z0-9()]+$/;
-        const B64 = /^[A-Za-z0-9+/=]+$/;
-        if (EFP.test(raw)) {
-            steps.push('encode_for_print');
-            raw = luaDeflate.decodeForPrint(raw);
-        } else if (B64.test(raw)) {
-            steps.push('base64');
-            raw = Buffer.from(raw, 'base64').toString('binary');
-        } else if (raw.startsWith('{') || raw.startsWith('[')) {
-            return steps; // raw JSON
-        } else {
-            return steps; // plaintext or unknown
-        }
-
-        if (!raw || raw.length === 0) return steps;
-
-        // Layer 3: compression
-        const firstByte = typeof raw === 'string' ? raw.charCodeAt(0) : raw[0];
-        if (firstByte >= 1 && firstByte <= 3) {
-            steps.push('lib_compress');
-            const buf = Buffer.from(raw, 'binary');
-            raw = LibCompress.decompress(buf).toString('binary');
-        } else {
-            try {
-                raw = zlib.inflateRawSync(Buffer.from(raw, 'binary')).toString('binary');
-                steps.push('zlib');
-            } catch (_) {
-                return steps; // unknown compression
-            }
-        }
-
-        // Layer 4: serializer
-        const first = raw.charCodeAt(0);
-        if (raw.startsWith('^1')) {
-            if (raw.includes('^^::')) steps.push('metadata');
-            steps.push('ace_serializer');
-        } else if (first === 1) {
-            steps.push('lib_serialize');
-        } else if ((first >> 5) === 5 || (first >> 5) === 4) {
-            steps.push('cbor'); // CBOR map or array
-        }
-
-        return steps;
-    }
-
-    // ── Format detection ──────────────────────────────────────────────────────
+    // ── Format detection (legacy) ─────────────────────────────────────────────
 
     detect_format() {
         this.format = AUTO_FORMATS.find(f => f.prefix && this.raw.startsWith(f.prefix))
@@ -284,6 +286,11 @@ class Pipeline {
         return this;
     }
 
+    deserialize_vuhdo() {
+        this.data = VuhDoSerializer.deserialize(this.serialized.toString('binary'));
+        return this;
+    }
+
     result() {
         return { addon: this.addon, version: this.version, data: this.data, metadata: this.metadata, steps: this._steps };
     }
@@ -304,6 +311,11 @@ class Pipeline {
 
     serialize_ace() {
         this.serialized = WowAceSerializer.serialize(this.data);
+        return this;
+    }
+
+    serialize_vuhdo() {
+        this.serialized = VuhDoSerializer.serialize(this.data);
         return this;
     }
 
@@ -328,7 +340,11 @@ class Pipeline {
     }
 
     prepend_prefix(pfx) {
-        this.raw = pfx + this.raw;
+        if (pfx instanceof RegExp) {
+            this.raw = this.prefix + this.raw;
+        } else {
+            this.raw = pfx + this.raw;
+        }
         return this;
     }
 
@@ -347,6 +363,7 @@ class Pipeline {
 Pipeline.AUTO_FORMATS = AUTO_FORMATS;
 Pipeline.FORMATS = FORMATS;
 Pipeline.STEPS = STEPS;
+Pipeline.detectSteps = detectSteps;
 Pipeline.findFormat = findFormat;
 
 module.exports = Pipeline;
