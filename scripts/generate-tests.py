@@ -584,7 +584,8 @@ def main():
         sections = group_by_section(tests)
 
         for lang in langs:
-            template_path = f"{module}.{lang}.j2"
+            ext = {"js": "js", "ruby": "rb", "python": "py", "lua": "lua"}[lang]
+            template_path = f"{module}.{ext}.j2"
             try:
                 tmpl = env.get_template(template_path)
             except jinja2.TemplateNotFound:

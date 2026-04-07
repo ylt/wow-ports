@@ -3,3 +3,4 @@ node_modules/
 lua/deps/
 __pycache__/
 *.pyc
+testdata/samples/
