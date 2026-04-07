@@ -1,0 +1,2082 @@
+# Test Manifest — Ground Truth from Lua Reference Implementations
+# Lua is the reference. All languages must pass these identically.
+# Input types: byte={type:byte,value:N}, bytes={type:bytes,values:[...]},
+#   infinity={type:infinity}, neg_infinity={type:neg_infinity}
+# Test types: serialize_contains, serialize_equals, serialize_contains_all,
+#   serialize_contains_any, serialize_count, deserialize_equals, roundtrip,
+#   roundtrip_keys, roundtrip_multi, roundtrip_empty, framing, error
+
+ace_serializer:
+- id: A1
+  section: A. String Escaping
+  description: NUL (0x00) → ~@
+  type: serialize_contains
+  input:
+    type: byte
+    value: 0
+  contains: ~@
+- id: A2a
+  section: A. String Escaping
+  description: control 0x01 → ~A
+  type: serialize_contains
+  input:
+    type: byte
+    value: 1
+  contains: ~A
+- id: A2b
+  section: A. String Escaping
+  description: control 0x0A (LF) → ~J
+  type: serialize_contains
+  input:
+    type: byte
+    value: 10
+  contains: ~J
+- id: A2c
+  section: A. String Escaping
+  description: control 0x1D → ~]
+  type: serialize_contains
+  input:
+    type: byte
+    value: 29
+  contains: ~]
+- id: A3
+  section: A. String Escaping
+  description: byte 30 (0x1E) → ~z (special case)
+  type: serialize_contains
+  input:
+    type: byte
+    value: 30
+  contains: ~z
+- id: A4
+  section: A. String Escaping
+  description: byte 31 (0x1F) → ~_
+  type: serialize_contains
+  input:
+    type: byte
+    value: 31
+  contains: ~_
+- id: A5
+  section: A. String Escaping
+  description: space (0x20) → ~`
+  type: serialize_contains
+  input: ' '
+  contains: ~`
+- id: A6
+  section: A. String Escaping
+  description: caret ^ (0x5E) → ~}
+  type: serialize_contains
+  input: ^
+  contains: ~}
+- id: A7
+  section: A. String Escaping
+  description: tilde ~ (0x7E) → ~|
+  type: serialize_contains
+  input: '~'
+  contains: ~|
+- id: A8
+  section: A. String Escaping
+  description: DEL (0x7F) → ~{
+  type: serialize_contains
+  input:
+    type: byte
+    value: 127
+  contains: ~{
+- id: A9
+  section: A. String Escaping
+  description: single-pass — no double-escaping
+  type: serialize_contains_all
+  input:
+    type: bytes
+    values:
+    - 94
+    - 126
+    - 127
+  contains:
+  - ~}
+  - ~|
+  - ~{
+- id: A10
+  section: A. String Escaping
+  description: printable ASCII passes through
+  type: serialize_contains
+  input: hello
+  contains: ^Shello
+- id: B11
+  section: B. String Unescaping
+  description: ~@ → NUL (0x00)
+  type: deserialize_equals
+  wire: ^1^S~@^^
+  expected:
+    type: byte
+    value: 0
+- id: B12a
+  section: B. String Unescaping
+  description: ~A → chr(1)
+  type: deserialize_equals
+  wire: ^1^S~A^^
+  expected:
+    type: byte
+    value: 1
+- id: B12b
+  section: B. String Unescaping
+  description: ~J → chr(10)
+  type: deserialize_equals
+  wire: ^1^S~J^^
+  expected:
+    type: byte
+    value: 10
+- id: B13
+  section: B. String Unescaping
+  description: ~z → byte 30 (0x1E)
+  type: deserialize_equals
+  wire: ^1^S~z^^
+  expected:
+    type: byte
+    value: 30
+- id: B14
+  section: B. String Unescaping
+  description: ~{ → DEL (0x7F)
+  type: deserialize_equals
+  wire: ^1^S~{^^
+  expected:
+    type: byte
+    value: 127
+- id: B15
+  section: B. String Unescaping
+  description: ~| → tilde (~)
+  type: deserialize_equals
+  wire: ^1^S~|^^
+  expected: '~'
+- id: B16
+  section: B. String Unescaping
+  description: ~} → caret (^)
+  type: deserialize_equals
+  wire: ^1^S~}^^
+  expected: ^
+- id: B17
+  section: B. String Unescaping
+  description: round-trip all escapable bytes
+  type: roundtrip
+  input:
+    type: bytes
+    values:
+    - 0
+    - 1
+    - 10
+    - 29
+    - 30
+    - 31
+    - 32
+    - 94
+    - 127
+    - 126
+- id: C18
+  section: C. Number Serialization
+  description: positive integer → ^N42
+  type: serialize_contains
+  input: 42
+  contains: ^N42
+- id: C19
+  section: C. Number Serialization
+  description: negative integer → ^N-42
+  type: serialize_contains
+  input: -42
+  contains: ^N-42
+- id: C20
+  section: C. Number Serialization
+  description: zero → ^N0
+  type: serialize_contains
+  input: 0
+  contains: ^N0
+- id: C21
+  section: C. Number Serialization
+  description: large integer
+  type: serialize_contains
+  input: 1000000
+  contains: ^N1000000
+- id: C22
+  section: C. Number Serialization
+  description: non-integer float uses ^N (tonumber/tostring check)
+  type: serialize_contains
+  input: 3.14
+  contains: ^N3.14
+- id: C23
+  section: C. Number Serialization
+  description: 3.14 exact wire format
+  type: serialize_equals
+  input: 3.14
+  expected: ^1^N3.14^^
+- id: C24a
+  section: C. Number Serialization
+  description: 0.1 wire format
+  type: serialize_equals
+  input: 0.1
+  expected: ^1^N0.1^^
+- id: C24b
+  section: C. Number Serialization
+  description: -99.99 wire format
+  type: serialize_equals
+  input: -99.99
+  expected: ^1^N-99.99^^
+- id: C24c
+  section: C. Number Serialization
+  description: 1e-10 wire format
+  type: serialize_equals
+  input: 1.0e-10
+  expected: ^1^N1e-10^^
+- id: C25
+  section: C. Number Serialization
+  description: positive infinity → ^N1.#INF or ^Ninf
+  type: serialize_contains_any
+  input:
+    type: infinity
+  contains_any:
+  - 1.#INF
+  - inf
+- id: C26
+  section: C. Number Serialization
+  description: negative infinity → ^N-1.#INF or ^N-inf
+  type: serialize_contains_any
+  input:
+    type: neg_infinity
+  contains_any:
+  - -1.#INF
+  - -inf
+- id: D27
+  section: D. Number Deserialization
+  description: ^N42 → 42
+  type: deserialize_equals
+  wire: ^1^N42^^
+  expected: 42
+- id: D28
+  section: D. Number Deserialization
+  description: ^N-42 → -42
+  type: deserialize_equals
+  wire: ^1^N-42^^
+  expected: -42
+- id: D29
+  section: D. Number Deserialization
+  description: ^N3.14 → 3.14
+  type: deserialize_equals
+  wire: ^1^N3.14^^
+  expected: 3.14
+- id: D30
+  section: D. Number Deserialization
+  description: ^N1.#INF → Infinity
+  type: deserialize_equals
+  wire: ^1^N1.#INF^^
+  expected:
+    type: infinity
+- id: D31
+  section: D. Number Deserialization
+  description: ^N-1.#INF → -Infinity
+  type: deserialize_equals
+  wire: ^1^N-1.#INF^^
+  expected:
+    type: neg_infinity
+- id: D32
+  section: D. Number Deserialization
+  description: ^Ninf → Infinity (alternate)
+  type: deserialize_equals
+  wire: ^1^Ninf^^
+  expected:
+    type: infinity
+- id: D33
+  section: D. Number Deserialization
+  description: ^N-inf → -Infinity (alternate)
+  type: deserialize_equals
+  wire: ^1^N-inf^^
+  expected:
+    type: neg_infinity
+- id: D34
+  section: D. Number Deserialization
+  description: ^F<m>^f<e> → correct float
+  type: deserialize_equals
+  wire: ^1^F4503599627370496^f-53^^
+  expected: 0.5
+- id: E35
+  section: E. Float Round-trips
+  description: round-trip 3.14
+  type: roundtrip
+  input: 3.14
+- id: E36
+  section: E. Float Round-trips
+  description: round-trip 0.1
+  type: roundtrip
+  input: 0.1
+- id: E37
+  section: E. Float Round-trips
+  description: round-trip 123.456
+  type: roundtrip
+  input: 123.456
+- id: E38
+  section: E. Float Round-trips
+  description: round-trip -99.99
+  type: roundtrip
+  input: -99.99
+- id: E39
+  section: E. Float Round-trips
+  description: round-trip 1e-10
+  type: roundtrip
+  input: 1.0e-10
+- id: E40
+  section: E. Float Round-trips
+  description: round-trip very small float (min normal)
+  type: roundtrip
+  input: 2.2250738585072014e-308
+- id: E41
+  section: E. Float Round-trips
+  description: round-trip very large float
+  type: roundtrip
+  input: 1.7976931348623157e+308
+- id: F42
+  section: F. Boolean
+  description: true → ^B
+  type: serialize_contains
+  input: true
+  contains: ^B
+- id: F43
+  section: F. Boolean
+  description: false → ^b
+  type: serialize_contains
+  input: false
+  contains: ^b
+- id: F44
+  section: F. Boolean
+  description: ^B → true
+  type: deserialize_equals
+  wire: ^1^B^^
+  expected: true
+- id: F45
+  section: F. Boolean
+  description: ^b → false
+  type: deserialize_equals
+  wire: ^1^b^^
+  expected: false
+- id: G46
+  section: G. Nil
+  description: nil → ^Z
+  type: serialize_contains
+  input: null
+  contains: ^Z
+- id: G47
+  section: G. Nil
+  description: ^Z → nil
+  type: deserialize_equals
+  wire: ^1^Z^^
+  expected: null
+- id: H48
+  section: H. Table Serialization
+  description: empty table → ^T^t
+  type: serialize_contains
+  input: {}
+  contains: ^T^t
+- id: H49
+  section: H. Table Serialization
+  description: single string key-value pair
+  type: serialize_contains_all
+  input:
+    a: 1
+  contains:
+  - ^T
+  - ^Sa
+  - ^N1
+  - ^t
+- id: H50
+  section: H. Table Serialization
+  description: multiple key-value pairs
+  type: serialize_contains_all
+  input:
+    a: 1
+    b: 2
+  contains:
+  - ^T
+  - ^t
+- id: H51
+  section: H. Table Serialization
+  description: nested table
+  type: serialize_count
+  input:
+    inner:
+      x: 1
+  count_pattern: ^T
+  expected_count: 2
+- id: H52
+  section: H. Table Serialization
+  description: array → 1-based integer keys
+  type: serialize_contains_all
+  input:
+  - a
+  - b
+  - c
+  contains:
+  - ^N1
+  - ^Sa
+  - ^N2
+  - ^Sb
+  - ^N3
+  - ^Sc
+- id: H53
+  section: H. Table Serialization
+  description: mixed table (integer + string keys)
+  type: serialize_contains_all
+  input:
+    '1': a
+    x: b
+  contains:
+  - ^T
+  - ^t
+- id: I54
+  section: I. Array Detection
+  description: sequential 1-based keys → array
+  type: roundtrip_keys
+  input:
+    '1': a
+    '2': b
+    '3': c
+  check_keys:
+    '1': a
+    '2': b
+    '3': c
+- id: I55
+  section: I. Array Detection
+  description: non-sequential keys → object
+  type: roundtrip_keys
+  input:
+    '1': a
+    '3': c
+  check_keys:
+    '1': a
+    '3': c
+- id: I56
+  section: I. Array Detection
+  description: string keys → object
+  type: roundtrip_keys
+  input:
+    x: 1
+    y: 2
+  check_keys:
+    x: 1
+    y: 2
+- id: I57
+  section: I. Array Detection
+  description: single element
+  type: roundtrip_keys
+  input:
+    '1': only
+  check_keys:
+    '1': only
+- id: I58
+  section: I. Array Detection
+  description: empty table → empty
+  type: roundtrip_empty
+  input: {}
+- id: J59
+  section: J. Framing
+  description: output starts with ^1 and ends with ^^
+  type: framing
+  input: hello
+  starts_with: ^1
+  ends_with: ^^
+- id: J62
+  section: J. Framing
+  description: control chars stripped from input
+  type: deserialize_equals
+  wire: "^1\t\n^Shello\r\n^^"
+  expected: hello
+- id: J60
+  section: K. Error Handling
+  description: missing ^1 prefix → error
+  type: error
+  wire: ^Shello^^
+- id: K64
+  section: K. Error Handling
+  description: empty string → error
+  type: error
+  wire: ''
+- id: K65
+  section: K. Error Handling
+  description: missing ^^ terminator → error
+  type: error
+  wire: ^1^Shello
+- id: L66
+  section: L. Round-trips
+  description: plain ASCII string
+  type: roundtrip
+  input: hello world test
+- id: L67
+  section: L. Round-trips
+  description: all special chars
+  type: roundtrip
+  input:
+    type: bytes
+    values:
+    - 0
+    - 1
+    - 30
+    - 31
+    - 32
+    - 94
+    - 126
+    - 127
+- id: L68
+  section: L. Round-trips
+  description: integer
+  type: roundtrip
+  input: 12345
+- id: L69
+  section: L. Round-trips
+  description: float
+  type: roundtrip
+  input: 3.14
+- id: L70
+  section: L. Round-trips
+  description: boolean
+  type: roundtrip_multi
+  inputs:
+  - true
+  - false
+- id: L71
+  section: L. Round-trips
+  description: nil
+  type: roundtrip
+  input: null
+- id: L72
+  section: L. Round-trips
+  description: nested table/array
+  type: roundtrip_keys
+  input:
+    '1': 1
+    '2':
+      '1': 2
+      '2': 3
+  check_keys:
+    '1': 1
+- id: L73
+  section: L. Round-trips
+  description: mixed-type table
+  type: roundtrip_keys
+  input:
+    n: 42
+    f: 3.14
+    b: true
+    s: hello
+  check_keys:
+    n: 42
+    f: 3.14
+    b: true
+    s: hello
+
+# L2. Fixture Wire-Format Tests — exact serialize/deserialize with known wire strings
+- id: L74
+  section: L2. Fixture Wire-Format Tests
+  description: simple array of two strings — exact wire
+  type: serialize_equals
+  input:
+    '1': a
+    '2': b
+  expected: "^1^T^N1^Sa^N2^Sb^t^^"
+- id: L75
+  section: L2. Fixture Wire-Format Tests
+  description: simple array of two strings — deserialize
+  type: deserialize_equals
+  wire: "^1^T^N1^Sa^N2^Sb^t^^"
+  expected:
+    '1': a
+    '2': b
+- id: L76
+  section: L2. Fixture Wire-Format Tests
+  description: array of three mixed values — exact wire
+  type: serialize_equals
+  input:
+    '1': hello
+    '2': 42
+    '3': true
+  expected: "^1^T^N1^Shello^N2^N42^N3^B^t^^"
+- id: L77
+  section: L2. Fixture Wire-Format Tests
+  description: array of three mixed values — deserialize
+  type: deserialize_equals
+  wire: "^1^T^N1^Shello^N2^N42^N3^B^t^^"
+  expected:
+    '1': hello
+    '2': 42
+    '3': true
+- id: L78
+  section: L2. Fixture Wire-Format Tests
+  description: nested array — exact wire
+  type: serialize_equals
+  input:
+    '1':
+      '1': a
+      '2': b
+    '2': c
+  expected: "^1^T^N1^T^N1^Sa^N2^Sb^t^N2^Sc^t^^"
+- id: L79
+  section: L2. Fixture Wire-Format Tests
+  description: nested array — deserialize
+  type: deserialize_equals
+  wire: "^1^T^N1^T^N1^Sa^N2^Sb^t^N2^Sc^t^^"
+  expected:
+    '1':
+      '1': a
+      '2': b
+    '2': c
+- id: L80
+  section: L2. Fixture Wire-Format Tests
+  description: array with null values — exact wire
+  type: serialize_equals
+  input:
+    '1': null
+    '2': null
+    '3': null
+    '4': test
+  expected: "^1^T^N1^Z^N2^Z^N3^Z^N4^Stest^t^^"
+- id: L81
+  section: L2. Fixture Wire-Format Tests
+  description: array with null values — deserialize
+  type: deserialize_equals
+  wire: "^1^T^N1^Z^N2^Z^N3^Z^N4^Stest^t^^"
+  expected:
+    '1': null
+    '2': null
+    '3': null
+    '4': test
+- id: L82
+  section: L2. Fixture Wire-Format Tests
+  description: nested structure from protocol spec — deserialize only
+  type: deserialize_equals
+  wire: "^1^T^Shello^Sworld^Stest^N123^Snested^T^N1^Z^N2^Z^N3^Z^N4^Stest^t^t^^"
+  expected:
+    hello: world
+    test: 123
+    nested:
+      '1': null
+      '2': null
+      '3': null
+      '4': test
+- id: L83
+  section: L2. Fixture Wire-Format Tests
+  description: mixed table string and integer keys — deserialize only
+  type: deserialize_equals
+  wire: "^1^T^Shello^Sworld^Sn^N42^t^^"
+  expected:
+    hello: world
+    n: 42
+
+# M. Float wire format consistency (review finding: MEDIUM — %.14g vs String())
+- id: M84
+  section: M. Float wire format consistency
+  description: 3.14 uses ^N path (not ^F)
+  type: serialize_contains
+  input: 3.14
+  contains: ^N3.14
+
+- id: M85
+  section: M. Float wire format consistency
+  description: very small float 1e-10 uses ^N path
+  type: serialize_contains
+  input: 1.0e-10
+  contains: ^N
+
+- id: M86
+  section: M. Float wire format consistency
+  description: 0.5 uses ^N path
+  type: serialize_contains
+  input: 0.5
+  contains: ^N0.5
+
+- id: M87
+  section: M. Float wire format consistency
+  description: extreme float 2.2250738585072014e-308 round-trips correctly
+  type: roundtrip
+  input: 2.2250738585072014e-308
+
+- id: M88
+  section: M. Float wire format consistency
+  description: extreme float 2.2250738585072014e-308 uses ^F path (%.14g loses precision)
+  type: serialize_contains
+  input: 2.2250738585072014e-308
+  contains: ^F
+
+# N. Escape edge cases (review finding: MEDIUM — invalid escape handling)
+- id: N88a
+  section: N. Escape edge cases
+  description: invalid escape ~> (ord 62, would produce negative byte) is rejected
+  type: error
+  wire: "^1^S~>^^"
+
+- id: N88b
+  section: N. Escape edge cases
+  description: invalid escape ~# (ord 35, would produce negative byte) is rejected
+  type: error
+  wire: "^1^S~#^^"
+
+- id: N88c
+  section: N. Escape edge cases
+  description: all control bytes 0x01-0x1D round-trip correctly
+  type: roundtrip
+  input:
+    type: byte_range
+    from: 1
+    to: 29
+
+- id: N89
+  section: N. Escape edge cases
+  description: all escapable bytes combined in one string round-trip
+  type: roundtrip
+  input:
+    type: bytes
+    values: [0, 1, 10, 29, 30, 31, 32, 94, 126, 127]
+
+- id: N90
+  section: N. Escape edge cases
+  description: high bytes 0x80-0xFF pass through unescaped
+  type: roundtrip
+  input:
+    type: byte_range
+    from: 128
+    to: 255
+
+lua_deflate:
+# M. Encode — EncodeForPrint output length and alphabet checks
+- id: M74
+  section: M. Encode
+  description: 3-byte input encodes to 4 chars (full group)
+  type: encode_length
+  input: abc
+  expected_length: 4
+
+- id: M75
+  section: M. Encode
+  description: 1-byte input encodes to 2 chars (tail)
+  type: encode_length
+  input: a
+  expected_length: 2
+
+- id: M76
+  section: M. Encode
+  description: 2-byte input encodes to 3 chars (tail)
+  type: encode_length
+  input: ab
+  expected_length: 3
+
+- id: M77
+  section: M. Encode
+  description: 6-byte input encodes to 8 chars (two full groups)
+  type: encode_length
+  input: abcdef
+  expected_length: 8
+
+- id: M78
+  section: M. Encode
+  description: empty input encodes to empty string
+  type: encode_decode
+  input: ""
+  expected: ""
+
+- id: M79
+  section: M. Encode
+  description: all 256 byte values encode using only alphabet chars a-zA-Z0-9()
+  type: encode_alphabet
+  input:
+    type: byte_range
+    from: 0
+    to: 255
+
+# N. Decode — DecodeForPrint correctness and error cases
+- id: N80
+  section: N. Decode
+  description: 4-char encoded string decodes back to 3 bytes (full group)
+  type: encode_decode
+  input: abc
+  expected: abc
+
+- id: N81
+  section: N. Decode
+  description: 2-char encoded string decodes back to 1 byte (tail)
+  type: encode_decode
+  input: a
+  expected: a
+
+- id: N82
+  section: N. Decode
+  description: 3-char encoded string decodes back to 2 bytes (tail)
+  type: encode_decode
+  input: ab
+  expected: ab
+
+- id: N83
+  section: N. Decode
+  description: whitespace stripped from start and end before decode
+  type: encode_decode
+  input: hello
+  expected: hello
+  decode_with_padding: "  \t{encoded}\n  "
+
+- id: N84
+  section: N. Decode
+  description: length-1 input decodes to nil (invalid)
+  type: decode_nil
+  input: a
+
+- id: N85
+  section: N. Decode
+  description: empty string decodes to empty string
+  type: encode_decode
+  input: ""
+  expected: ""
+
+- id: N86a
+  section: N. Decode
+  description: input with invalid character '!' decodes to nil
+  type: decode_nil
+  input: abc!
+
+- id: N86b
+  section: N. Decode
+  description: input of only invalid characters decodes to nil
+  type: decode_nil
+  input: "!@#$"
+
+# O. Round-trips — encode then decode identity
+- id: O87
+  section: O. Round-trips
+  description: simple ASCII string round-trips correctly
+  type: roundtrip
+  input: "Hello, World!"
+
+- id: O88
+  section: O. Round-trips
+  description: all 256 byte values round-trip correctly
+  type: roundtrip
+  input:
+    type: byte_range
+    from: 0
+    to: 255
+
+- id: O89
+  section: O. Round-trips
+  description: large payload (1125 bytes) round-trips correctly
+  type: roundtrip
+  input:
+    type: repeated
+    value: "The quick brown fox jumps over the lazy dog. "
+    count: 25
+
+- id: O90
+  section: O. Round-trips
+  description: single byte 0x42 round-trips correctly
+  type: roundtrip
+  input:
+    type: byte
+    value: 66
+
+- id: O91
+  section: O. Round-trips
+  description: two bytes 0x01 0x02 round-trip correctly
+  type: roundtrip
+  input:
+    type: bytes
+    values: [1, 2]
+
+- id: O92
+  section: O. Round-trips
+  description: three bytes 0xAA 0xBB 0xCC (boundary) round-trip correctly
+  type: roundtrip
+  input:
+    type: bytes
+    values: [170, 187, 204]
+
+- id: O93a
+  section: O. Round-trips
+  description: three null bytes round-trip correctly
+  type: roundtrip
+  input:
+    type: bytes
+    values: [0, 0, 0]
+
+- id: O93b
+  section: O. Round-trips
+  description: string with embedded null bytes round-trips correctly
+  type: roundtrip
+  input:
+    type: bytes
+    values: [97, 0, 98, 0, 99]
+
+# P. Native Variant — determinism and inverse properties
+- id: P94
+  section: P. Native Variant
+  description: encode output is deterministic (same input → same output)
+  type: deterministic
+  input: deterministic test
+
+- id: P95
+  section: P. Native Variant
+  description: decode is inverse of encode for string with null and high bytes
+  type: roundtrip
+  input:
+    type: bytes
+    values: [105, 110, 118, 101, 114, 115, 101, 32, 116, 101, 115, 116, 32, 0, 255]
+
+- id: P96
+  section: P. Native Variant
+  description: round-trip preserves all byte values in doubled 256-byte payload
+  type: roundtrip
+  input:
+    type: bytes
+    values: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
+             32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
+             64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,
+             96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
+             128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
+             160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+             192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
+             224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
+             0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
+             32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
+             64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,
+             96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
+             128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
+             160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+             192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
+             224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255]
+
+# Q. Encode Hex — exact hex-to-encoded wire format tests
+- id: Q97
+  section: Q. Encode Hex
+  description: single null byte
+  type: encode_hex
+  input_hex: "00"
+  expected_encoded: aa
+
+- id: Q98
+  section: Q. Encode Hex
+  description: single 0xFF byte
+  type: encode_hex
+  input_hex: ff
+  expected_encoded: ")d"
+
+- id: Q99
+  section: Q. Encode Hex
+  description: three bytes filling one group
+  type: encode_hex
+  input_hex: "000102"
+  expected_encoded: aeGa
+
+- id: Q100
+  section: Q. Encode Hex
+  description: hello string (5 bytes, 1 full group + 1 partial)
+  type: encode_hex
+  input_hex: 68656c6c6f
+  expected_encoded: OvgBS9g
+
+- id: Q101
+  section: Q. Encode Hex
+  description: ABC string (3 bytes, one full group)
+  type: encode_hex
+  input_hex: "414243"
+  expected_encoded: bj0q
+
+- id: Q102
+  section: Q. Encode Hex
+  description: six bytes (two full groups)
+  type: encode_hex
+  input_hex: "000102030405"
+  expected_encoded: aeGadqqb
+
+- id: Q103
+  section: Q. Encode Hex
+  description: two bytes (partial group, 3 encoded chars)
+  type: encode_hex
+  input_hex: "4143"
+  expected_encoded: bne
+
+# R. Invalid input consistency (review finding: LOW/MEDIUM)
+- id: R104
+  section: R. Invalid input consistency
+  description: decode of 3-char string with one invalid char returns nil
+  type: decode_nil
+  input: "ab!"
+
+- id: R105
+  section: R. Invalid input consistency
+  description: decode of mixed valid and invalid chars returns nil
+  type: decode_nil
+  input: "aB(!"
+
+- id: R106
+  section: R. Invalid input consistency
+  description: decode of valid 4-char string succeeds (not nil)
+  type: encode_decode
+  input: abc
+  expected: abc
+
+lib_serialize:
+# A. Nil
+- id: A01
+  section: A. Nil
+  description: serialize nil produces non-empty string
+  type: serialize_nonempty
+  input: null
+
+- id: A02
+  section: A. Nil
+  description: nil round-trips to nil
+  type: deserialize_nil
+  input: null
+
+- id: A03
+  section: A. Nil
+  description: Deserialize of serialized nil returns ok=true and nil value
+  type: deserialize_nil
+  input: null
+
+# B. Integer encoding (small embedded)
+- id: B01
+  section: B. Integer encoding (small embedded)
+  description: zero round-trips correctly (embedded 1-byte)
+  type: roundtrip
+  input: 0
+
+- id: B02
+  section: B. Integer encoding (small embedded)
+  description: positive small int 1 round-trips correctly
+  type: roundtrip
+  input: 1
+
+- id: B03
+  section: B. Integer encoding (small embedded)
+  description: small int 127 round-trips correctly (embedded 1-byte max)
+  type: roundtrip
+  input: 127
+
+- id: B04
+  section: B. Integer encoding (small embedded)
+  description: small negative -1 round-trips correctly (embedded 2-byte)
+  type: roundtrip
+  input: -1
+
+- id: B05
+  section: B. Integer encoding (small embedded)
+  description: small negative -4095 round-trips correctly (embedded 2-byte near max)
+  type: roundtrip
+  input: -4095
+
+- id: B06
+  section: B. Integer encoding (small embedded)
+  description: positive 128 round-trips correctly (embedded 2-byte)
+  type: roundtrip
+  input: 128
+
+- id: B07
+  section: B. Integer encoding (small embedded)
+  description: positive 4095 round-trips correctly (embedded 2-byte max)
+  type: roundtrip
+  input: 4095
+
+# C. Integer encoding (multi-byte)
+- id: C01
+  section: C. Integer encoding (multi-byte)
+  description: 16-bit positive 4096 round-trips correctly
+  type: roundtrip
+  input: 4096
+
+- id: C02
+  section: C. Integer encoding (multi-byte)
+  description: 16-bit positive max 65535 round-trips correctly
+  type: roundtrip
+  input: 65535
+
+- id: C03
+  section: C. Integer encoding (multi-byte)
+  description: 16-bit negative -4096 round-trips correctly
+  type: roundtrip
+  input: -4096
+
+- id: C04
+  section: C. Integer encoding (multi-byte)
+  description: 24-bit positive 65536 round-trips correctly
+  type: roundtrip
+  input: 65536
+
+- id: C05
+  section: C. Integer encoding (multi-byte)
+  description: 24-bit positive max 16777215 round-trips correctly
+  type: roundtrip
+  input: 16777215
+
+- id: C06
+  section: C. Integer encoding (multi-byte)
+  description: 32-bit positive 16777216 round-trips correctly
+  type: roundtrip
+  input: 16777216
+
+- id: C07
+  section: C. Integer encoding (multi-byte)
+  description: 32-bit positive max 4294967295 round-trips correctly
+  type: roundtrip
+  input: 4294967295
+
+- id: C08
+  section: C. Integer encoding (multi-byte)
+  description: 64-bit positive 4294967296 round-trips correctly
+  type: roundtrip
+  input: 4294967296
+
+- id: C09
+  section: C. Integer encoding (multi-byte)
+  description: large negative -65536 round-trips correctly
+  type: roundtrip
+  input: -65536
+
+# D. Float encoding
+- id: D01
+  section: D. Float encoding
+  description: float 3.14 round-trips correctly
+  type: roundtrip
+  input: 3.14
+
+- id: D02
+  section: D. Float encoding
+  description: float 0.1 round-trips correctly
+  type: roundtrip
+  input: 0.1
+
+- id: D03
+  section: D. Float encoding
+  description: float -99.99 round-trips correctly
+  type: roundtrip
+  input: -99.99
+
+- id: D04
+  section: D. Float encoding
+  description: float 1e-10 round-trips correctly
+  type: roundtrip
+  input: 1.0e-10
+
+- id: D05
+  section: D. Float encoding
+  description: float 0.5 round-trips correctly
+  type: roundtrip
+  input: 0.5
+
+- id: D06
+  section: D. Float encoding
+  description: positive infinity round-trips correctly
+  type: roundtrip
+  input:
+    type: infinity
+
+- id: D07
+  section: D. Float encoding
+  description: negative infinity round-trips correctly
+  type: roundtrip
+  input:
+    type: neg_infinity
+
+- id: D08
+  section: D. Float encoding
+  description: max exact double integer 2^53 (9007199254740992) round-trips correctly
+  type: roundtrip
+  input: 9007199254740992
+
+- id: D09
+  section: D. Float encoding
+  description: float 1.5 round-trips correctly (floatstr short path)
+  type: roundtrip
+  input: 1.5
+
+# E. Boolean
+- id: E01
+  section: E. Boolean
+  description: true round-trips correctly
+  type: roundtrip
+  input: true
+
+- id: E02
+  section: E. Boolean
+  description: false round-trips correctly
+  type: roundtrip
+  input: false
+
+- id: E03
+  section: E. Boolean
+  description: true and false produce distinct serializations
+  type: distinct_serialization
+  inputs: [true, false]
+
+# F. String encoding (embedded <= 15 chars)
+- id: F01
+  section: F. String encoding (embedded)
+  description: empty string round-trips correctly
+  type: roundtrip
+  input: ""
+
+- id: F02
+  section: F. String encoding (embedded)
+  description: single char string round-trips correctly
+  type: roundtrip
+  input: a
+
+- id: F03
+  section: F. String encoding (embedded)
+  description: two char string round-trips correctly
+  type: roundtrip
+  input: ab
+
+- id: F04
+  section: F. String encoding (embedded)
+  description: short 5-char string round-trips correctly
+  type: roundtrip
+  input: hello
+
+- id: F05
+  section: F. String encoding (embedded)
+  description: 15-char string (max embedded) round-trips correctly
+  type: roundtrip
+  input: "123456789012345"
+
+# G. String encoding (length-prefixed > 15 chars)
+- id: G01
+  section: G. String encoding (length-prefixed)
+  description: 16-char string (STR_8 path) round-trips correctly
+  type: roundtrip
+  input: "1234567890123456"
+
+- id: G02
+  section: G. String encoding (length-prefixed)
+  description: long 100-char string round-trips correctly
+  type: roundtrip
+  input:
+    type: repeated
+    value: x
+    count: 100
+
+- id: G03
+  section: G. String encoding (length-prefixed)
+  description: string with all 256 byte values round-trips correctly
+  type: roundtrip
+  input:
+    type: byte_range
+    from: 0
+    to: 255
+
+# H. String refs (strings > 2 bytes tracked on first use)
+- id: H01
+  section: H. String refs
+  description: repeated string in table round-trips with correct values
+  type: roundtrip_keys
+  input:
+    a: hello world
+    b: hello world
+  check_keys:
+    a: hello world
+    b: hello world
+
+- id: H02
+  section: H. String refs
+  description: string repeated 5 times in array round-trips with correct values
+  type: roundtrip_keys
+  input:
+    '1': shared_key
+    '2': shared_key
+    '3': shared_key
+    '4': shared_key
+    '5': shared_key
+  check_keys:
+    '1': shared_key
+    '2': shared_key
+    '3': shared_key
+    '4': shared_key
+    '5': shared_key
+
+- id: H03
+  section: H. String refs
+  description: short strings (<=2 bytes) not tracked as refs but still round-trip correctly
+  type: roundtrip_keys
+  input:
+    a: x
+    b: x
+    c: xy
+    d: xy
+  check_keys:
+    a: x
+    b: x
+    c: xy
+    d: xy
+
+# I. Empty and small tables (embedded path)
+- id: I01
+  section: I. Empty and small tables
+  description: empty table round-trips to empty table
+  type: roundtrip_empty
+  input: {}
+
+- id: I02
+  section: I. Empty and small tables
+  description: table with 1 key-value pair round-trips correctly
+  type: roundtrip_keys
+  input:
+    a: 1
+  check_keys:
+    a: 1
+
+- id: I03
+  section: I. Empty and small tables
+  description: table with 15 entries (embedded max) round-trips all values correctly
+  type: roundtrip_keys
+  input:
+    k1: 1
+    k2: 2
+    k3: 3
+    k4: 4
+    k5: 5
+    k6: 6
+    k7: 7
+    k8: 8
+    k9: 9
+    k10: 10
+    k11: 11
+    k12: 12
+    k13: 13
+    k14: 14
+    k15: 15
+  check_keys:
+    k1: 1
+    k2: 2
+    k3: 3
+    k4: 4
+    k5: 5
+    k6: 6
+    k7: 7
+    k8: 8
+    k9: 9
+    k10: 10
+    k11: 11
+    k12: 12
+    k13: 13
+    k14: 14
+    k15: 15
+
+# J. Arrays (sequential 1-based integer keys)
+- id: J01
+  section: J. Arrays
+  description: single-element array round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': only
+  check_keys:
+    '1': only
+
+- id: J02
+  section: J. Arrays
+  description: simple array [a, b, c] round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': a
+    '2': b
+    '3': c
+  check_keys:
+    '1': a
+    '2': b
+    '3': c
+
+- id: J03
+  section: J. Arrays
+  description: integer array [10, 20, 30, 40, 50] round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': 10
+    '2': 20
+    '3': 30
+    '4': 40
+    '5': 50
+  check_keys:
+    '1': 10
+    '2': 20
+    '3': 30
+    '4': 40
+    '5': 50
+
+- id: J04
+  section: J. Arrays
+  description: mixed-type array [str, 42, true, false] round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': str
+    '2': 42
+    '3': true
+    '4': false
+  check_keys:
+    '1': str
+    '2': 42
+    '3': true
+    '4': false
+
+- id: J05
+  section: J. Arrays
+  description: 16-element array (ARRAY_8 path) round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': 10
+    '2': 20
+    '3': 30
+    '4': 40
+    '5': 50
+    '6': 60
+    '7': 70
+    '8': 80
+    '9': 90
+    '10': 100
+    '11': 110
+    '12': 120
+    '13': 130
+    '14': 140
+    '15': 150
+    '16': 160
+  check_keys:
+    '1': 10
+    '2': 20
+    '3': 30
+    '4': 40
+    '5': 50
+    '6': 60
+    '7': 70
+    '8': 80
+    '9': 90
+    '10': 100
+    '11': 110
+    '12': 120
+    '13': 130
+    '14': 140
+    '15': 150
+    '16': 160
+
+# K. Mixed tables (array + hash portions)
+- id: K01
+  section: K. Mixed tables
+  description: mixed table with integer and string keys round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': first
+    '2': second
+    x: extra
+  check_keys:
+    '1': first
+    '2': second
+    x: extra
+
+- id: K02
+  section: K. Mixed tables
+  description: mixed table with various value types round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1': arr1
+    '2': arr2
+    key: 99
+    flag: true
+  check_keys:
+    '1': arr1
+    '2': arr2
+    key: 99
+    flag: true
+
+- id: K03
+  section: K. Mixed tables
+  description: nested table round-trips inner values correctly
+  type: roundtrip_keys
+  input:
+    inner:
+      x: 1
+      y: 2
+  check_keys:
+    inner:
+      x: 1
+      y: 2
+
+- id: K04
+  section: K. Mixed tables
+  description: deeply nested table round-trips leaf value correctly
+  type: roundtrip_keys
+  input:
+    a:
+      b:
+        c:
+          d: 42
+  check_keys:
+    a:
+      b:
+        c:
+          d: 42
+
+# L. Table refs (repeated table references)
+- id: L01
+  section: L. Table refs
+  description: shared sub-table round-trips with correct values in both references
+  type: roundtrip_keys
+  input:
+    a:
+      value: 99
+    b:
+      value: 99
+  check_keys:
+    a:
+      value: 99
+    b:
+      value: 99
+
+- id: L02
+  section: L. Table refs
+  description: deserialized shared table refs point to the same object (mutation test)
+  type: ref_identity
+  input:
+    a:
+      value: 1
+    b:
+      value: 1
+  shared_key_path: [a, b]
+  mutate_key: value
+  mutate_value: 42
+
+# M. Variadic Serialize/Deserialize
+- id: M01
+  section: M. Variadic Serialize/Deserialize
+  description: serialize multiple values (1, hello, true) deserializes all correctly
+  type: roundtrip_multi
+  inputs: [1, hello, true]
+
+- id: M02
+  section: M. Variadic Serialize/Deserialize
+  description: serialize values with nil in middle (1, nil, 3) deserializes all correctly
+  type: roundtrip_multi
+  inputs: [1, null, 3]
+
+# N. Error handling
+- id: N01
+  section: N. Error handling
+  description: deserializing corrupt data returns a boolean result (ok field)
+  type: error
+  wire: "not valid data \xff"
+
+- id: N02
+  section: N. Error handling
+  description: IsSerializableType returns true for nil, number, string, boolean, table
+  type: is_serializable
+  inputs: [null, 42, hello, true, {}]
+  expected: true
+
+- id: N03
+  section: N. Error handling
+  description: IsSerializableType returns false for functions
+  type: is_serializable_false
+  input_type: function
+
+# O. Round-trips (comprehensive)
+- id: O01
+  section: O. Round-trips (comprehensive)
+  description: complex nested structure round-trips all fields correctly
+  type: roundtrip_keys
+  input:
+    name: test
+    values:
+      '1': 1
+      '2': 2
+      '3': 3
+    meta:
+      active: true
+      count: 0
+  check_keys:
+    name: test
+    meta:
+      active: true
+      count: 0
+
+- id: O02
+  section: O. Round-trips (comprehensive)
+  description: table with boolean keys round-trips correctly
+  type: roundtrip_keys
+  input:
+    true: 'yes'
+    false: 'no'
+  check_keys:
+    true: 'yes'
+    false: 'no'
+
+- id: O03
+  section: O. Round-trips (comprehensive)
+  description: table with float key 1.5 round-trips correctly
+  type: roundtrip_keys
+  input:
+    '1.5': fractional
+  check_keys:
+    '1.5': fractional
+
+- id: O04
+  section: O. Round-trips (comprehensive)
+  description: string with embedded null bytes round-trips correctly
+  type: roundtrip
+  input:
+    type: bytes
+    values: [97, 0, 98, 0, 99]
+
+- id: O05
+  section: O. Round-trips (comprehensive)
+  description: all 256 byte values in a string round-trip correctly
+  type: roundtrip
+  input:
+    type: byte_range
+    from: 0
+    to: 255
+
+# P. Mixed table + table ref integrity (review finding: CRITICAL)
+# Wire bytes generated by Lua — these expose ref index corruption in read_mixed
+- id: P01
+  section: P. Mixed table + table ref integrity
+  description: shared mixed table ref — both keys see array and hash portions
+  type: deserialize_wire_hex
+  wire_hex: "01 26 12 62 1e 15 29 32 6b 65 79 32 76 61 6c 12 61 e8 02"
+  check_keys:
+    a:
+      '1': 10
+      '2': 20
+      key: val
+    b:
+      '1': 10
+      '2': 20
+      key: val
+
+- id: P02
+  section: P. Mixed table + table ref integrity
+  description: mixed table then plain table then refs to both — ref indices correct
+  type: deserialize_wire_hex
+  wire_hex: "01 46 52 72 65 66 5f 6d 1e c9 84 0c 42 6e 61 6d 65 52 6d 69 78 65 64 52 72 65 66 5f 70 26 12 79 05 12 78 03 12 6d e8 02 12 70 e8 03"
+  check_keys:
+    m:
+      '1': 100
+      '2': 200
+      name: mixed
+    p:
+      x: 1
+      y: 2
+    ref_m:
+      '1': 100
+      '2': 200
+      name: mixed
+    ref_p:
+      x: 1
+      y: 2
+
+- id: P03
+  section: P. Mixed table + table ref integrity
+  description: mixed table followed by second table — roundtrip preserves all
+  type: roundtrip_keys
+  input:
+    first:
+      '1': x
+      '2': y
+      name: mixed1
+    second:
+      '1': a
+      '2': b
+      name: mixed2
+  check_keys:
+    first:
+      '1': x
+      '2': y
+      name: mixed1
+    second:
+      '1': a
+      '2': b
+      name: mixed2
+
+# Q. Numeric key type preservation (review finding: HIGH)
+# Wire bytes from Lua confirm integer keys, not strings
+- id: Q01
+  section: Q. Numeric key type preservation
+  description: Lua-serialized array [a,b,c] deserializes with correct values
+  type: deserialize_wire_hex_array
+  wire_hex: "01 3a 12 61 12 62 12 63"
+  expected_values:
+    - a
+    - b
+    - c
+
+- id: Q02
+  section: Q. Numeric key type preservation
+  description: Lua-serialized mixed int+string keys deserialize correctly
+  type: deserialize_wire_hex
+  wire_hex: "01 1e 52 66 69 72 73 74 62 73 65 63 6f 6e 64 42 6e 61 6d 65 42 74 65 73 74"
+  check_keys:
+    '1': first
+    '2': second
+    name: test
+
+- id: Q03
+  section: Q. Numeric key type preservation
+  description: Lua-serialized table has integer keys not string keys
+  type: deserialize_wire_hex_key_types
+  wire_hex: "01 1e 52 66 69 72 73 74 62 73 65 63 6f 6e 64 42 6e 61 6d 65 42 74 65 73 74"
+  int_keys: [1, 2]
+  string_keys: [name]
+
+- id: Q04
+  section: Q. Numeric key type preservation
+  description: mixed integer and string keys roundtrip with correct key types
+  type: roundtrip_key_types
+  input:
+    '1': first
+    '2': second
+    name: test
+  int_keys: [1, 2]
+  string_keys: [name]
+
+- id: Q05
+  section: Q. Numeric key type preservation
+  description: integer-keyed table serializes as array not table-with-string-keys
+  type: serialize_wire_hex
+  input:
+    '1': a
+    '2': b
+  expected_hex: "01 2a 12 61 12 62"
+
+# R. Variadic round-trip verification (review finding: MEDIUM)
+- id: R01
+  section: R. Variadic round-trip verification
+  description: single value variadic round-trip
+  type: roundtrip_multi
+  inputs: [42]
+
+- id: R02
+  section: R. Variadic round-trip verification
+  description: four mixed-type values variadic round-trip
+  type: roundtrip_multi
+  inputs: [hello, 42, true, 3.14]
+
+- id: R03
+  section: R. Variadic round-trip verification
+  description: variadic with nil at start and end
+  type: roundtrip_multi
+  inputs: [null, hello, null]
+
+# S. Nil wire format (review finding: MEDIUM — NIL << 3 shift)
+- id: S01
+  section: S. Nil wire format
+  description: Lua-serialized nil is exactly 01 00
+  type: serialize_wire_hex
+  input: null
+  expected_hex: "01 00"
+
+cbor:
+# A. Round-trip encode→decode
+- id: A1
+  section: A. Round-trip
+  description: string value
+  type: roundtrip
+  input: hello world
+
+- id: A2
+  section: A. Round-trip
+  description: integer value
+  type: roundtrip
+  input: 42
+
+- id: A3
+  section: A. Round-trip
+  description: boolean true
+  type: roundtrip
+  input: true
+
+- id: A4
+  section: A. Round-trip
+  description: null value
+  type: roundtrip
+  input: null
+
+- id: A5
+  section: A. Round-trip
+  description: string-keyed object
+  type: roundtrip_keys
+  input:
+    key: value
+    num: 7
+  check_keys:
+    key: value
+    num: 7
+
+- id: A6
+  section: A. Round-trip
+  description: array
+  type: roundtrip_array
+  input:
+  - a
+  - b
+  - c
+
+# B. Byte string conversion
+- id: B1
+  section: B. Byte string conversion
+  description: byte string is converted to UTF-8 string
+  type: byte_string_conversion
+  input: hello
+
+- id: B2
+  section: B. Byte string conversion
+  description: nested byte string in object is converted
+  type: byte_string_nested
+  key: key
+  input: world
+
+- id: B3
+  section: B. Byte string conversion
+  description: byte strings in list are converted
+  type: byte_string_list
+  input:
+  - a
+  - b
+
+# C. Array detection
+- id: C1
+  section: C. Array detection
+  description: sequential 1-based int keys converted to array
+  type: array_detection
+  input:
+    '1': a
+    '2': b
+    '3': c
+  expected:
+  - a
+  - b
+  - c
+
+- id: C2
+  section: C. Array detection
+  description: non-sequential int keys stay as object
+  type: array_detection_negative
+  input:
+    '1': a
+    '3': c
+
+- id: C3
+  section: C. Array detection
+  description: string-keyed object stays as object
+  type: array_detection_string_keys
+  input:
+    a: 1
+    b: 2
+
+# D. Plater v2 prefix
+- id: D1
+  section: D. Plater v2 prefix
+  description: encodes with !PLATER:2! prefix
+  type: plater_v2_encode
+  input:
+    x: 1
+
+- id: D2
+  section: D. Plater v2 prefix
+  description: decodes !PLATER:2! to plater v2
+  type: plater_v2_decode
+  input:
+    x: 1
+
+- id: D3
+  section: D. Plater v2 prefix
+  description: Plater v2 round-trip preserves data
+  type: plater_v2_roundtrip
+  input:
+    profile: Default
+    enabled: true
+    level: 5
+
+- id: D4
+  section: D. Plater v2 prefix
+  description: "!PLATER:2! is detected before ! catch-all"
+  type: plater_v2_detection
+  input: test
+
+pipeline:
+# A. Prefix encoding
+- id: A1
+  section: A. Prefix encoding
+  description: WA v1 uses ! prefix
+  type: prefix_encoding
+  addon: weakauras
+  version: 1
+  data: x
+  expected_prefix: "!"
+  not_prefix:
+  - "!WA:2!"
+  - "!E1!"
+
+- id: A2
+  section: A. Prefix encoding
+  description: ElvUI uses !E1! prefix
+  type: prefix_encoding
+  addon: elvui
+  version: 1
+  data: x
+  expected_prefix: "!E1!"
+
+- id: A3
+  section: A. Prefix encoding
+  description: legacy (v0) uses no prefix
+  type: prefix_no_prefix
+  addon: weakauras
+  version: 0
+  data: x
+
+- id: A4
+  section: A. Prefix encoding
+  description: WA v2 uses !WA:2! prefix
+  type: prefix_encoding
+  addon: weakauras
+  version: 2
+  data:
+    a: 1
+  expected_prefix: "!WA:2!"
+
+# B. Prefix detection
+- id: B1
+  section: B. Prefix detection
+  description: "!E1! detected as elvui v1"
+  type: prefix_detection
+  addon: elvui
+  version: 1
+  data:
+    a: 1
+
+- id: B2
+  section: B. Prefix detection
+  description: "! detected as weakauras v1"
+  type: prefix_detection
+  addon: weakauras
+  version: 1
+  data:
+    a: 1
+
+- id: B3
+  section: B. Prefix detection
+  description: no prefix detected as weakauras v0 (legacy)
+  type: prefix_detection
+  addon: weakauras
+  version: 0
+  data:
+    a: 1
+
+- id: B4
+  section: B. Prefix detection
+  description: "!WA:2! detected as weakauras v2"
+  type: prefix_detection
+  addon: weakauras
+  version: 2
+  data:
+    a: 1
+
+# C. ExportResult structure
+- id: C1
+  section: C. ExportResult structure
+  description: decode returns all four fields
+  type: export_result_structure
+  addon: weakauras
+  version: 1
+  data:
+    x: 1
+
+# D. Round-trips
+- id: D1
+  section: D. Round-trips
+  description: WA v1 string
+  type: roundtrip
+  addon: weakauras
+  version: 1
+  data: hello
+  check_data: hello
+  check_addon: weakauras
+  check_version: 1
+  check_metadata_null: true
+
+- id: D2
+  section: D. Round-trips
+  description: WA v1 table
+  type: roundtrip_table
+  addon: weakauras
+  version: 1
+  data:
+    key: value
+    num: 42
+  check_keys:
+    key: value
+    num: 42
+
+- id: D3
+  section: D. Round-trips
+  description: WA v1 array
+  type: roundtrip_array
+  addon: weakauras
+  version: 1
+  data:
+    '1': a
+    '2': b
+    '3': c
+
+- id: D4
+  section: D. Round-trips
+  description: WA v1 nested table
+  type: roundtrip_nested
+  addon: weakauras
+  version: 1
+  data:
+    outer:
+      inner: 99
+    list:
+      '1': 1
+      '2': 2
+  check_outer_inner: 99
+  check_list:
+    '1': 1
+    '2': 2
+
+- id: D5
+  section: D. Round-trips
+  description: legacy v0 round-trip
+  type: roundtrip_table
+  addon: weakauras
+  version: 0
+  data:
+    flag: true
+    n: -5
+  check_keys:
+    flag: true
+    n: -5
+
+- id: D6
+  section: D. Round-trips
+  description: WA v2 round-trip
+  type: roundtrip_table
+  addon: weakauras
+  version: 2
+  data:
+    key: v2data
+    num: 7
+  check_keys:
+    key: v2data
+    num: 7
+
+# E. ElvUI metadata
+- id: E1
+  section: E. ElvUI metadata
+  description: round-trip preserves metadata profileType and profileKey
+  type: elvui_metadata
+  data:
+    setting: 1
+  metadata:
+    profile_type: profile
+    profile_key: Default
+
+- id: E2
+  section: E. ElvUI metadata
+  description: ElvUI without metadata gives null metadata after decode
+  type: elvui_no_metadata
+  data:
+    a: 1

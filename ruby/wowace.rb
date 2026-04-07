@@ -21,10 +21,16 @@ module WowAceSerialization
   end
 
   def serialize_string(str)
-    escaped = str.gsub(/[\x00-\x20]/) { |m| "~#{(m.ord + 64).chr}" }
-                 .gsub('^', '~U')
-                 .gsub('~', '~T')
-                 .gsub("\x7F", '~S')
+    escaped = str.gsub(/[\x00-\x20\x5E\x7E\x7F]/) do |m|
+      byte = m.ord
+      case byte
+      when 0x1E then '~z'
+      when 0x5E then '~}'
+      when 0x7E then '~|'
+      when 0x7F then '~{'
+      else "~#{(byte + 64).chr}"
+      end
+    end
     "^S#{escaped}"
   end
 
@@ -33,11 +39,17 @@ module WowAceSerialization
       '^N1.#INF'
     elsif num.infinite? == -1 # Negative Infinity
       '^N-1.#INF'
-    elsif num.is_a?(Integer) || num.to_s == num.to_f.to_s
+    elsif num.is_a?(Integer)
       "^N#{num}"
     else
-      mantissa, exponent = Math.frexp(num)
-      "^F#{(mantissa * (2**53)).to_i}^f#{exponent}"
+      # Lua uses tonumber(tostring(v))==v — if the float survives string round-trip, use ^N
+      str_val = "%.14g" % num
+      if str_val.to_f == num
+        "^N#{str_val}"
+      else
+        mantissa, exponent = Math.frexp(num)
+        "^F#{(mantissa * (2**53)).to_i}^f#{exponent - 53}"
+      end
     end
   end
 
@@ -61,6 +73,7 @@ module WowAceDeserialization
   def deserialize(str)
     str = str.strip.gsub(/[\x00-\x20]/, '') # remove control characters and whitespace
     raise 'Invalid prefix' unless str.start_with?('^1')
+    raise 'Missing terminator' unless str.end_with?('^^')
 
     data = str[2..-3] # remove prefix and ending ^^
     deserialize_internal(data)
@@ -94,11 +107,13 @@ module WowAceDeserialization
     string_end = data.index(/(?=\^[\wZbt])/) || data.length
     string_data = data.slice!(0, string_end)
     string_data.gsub!(/~(.)/) do
-      case ::Regexp.last_match(1)
-      when 'U' then '^'
-      when 'T' then '~'
-      when 'S' then "\x7F"
-      else (::Regexp.last_match(1).ord - 64).chr
+      c = ::Regexp.last_match(1)
+      case c.ord
+      when 0...122 then (c.ord - 64).chr  # generic: chr(byte - 64)
+      when 122 then "\x1E"                # ~z → byte 30
+      when 123 then "\x7F"               # ~{ → DEL
+      when 124 then '~'                   # ~| → ~
+      when 125 then '^'                   # ~} → ^
       end
     end
     string_data
@@ -122,7 +137,7 @@ module WowAceDeserialization
     mantissa = data.slice!(/^-?\d+/).to_i
     data.slice!(0, 2) # remove ^f
     exponent = data.slice!(/^-?\d+/).to_i
-    Math.ldexp(mantissa, exponent - 53).to_f
+    Math.ldexp(mantissa, exponent).to_f
   end
 
   def deserialize_table(data)
@@ -133,13 +148,7 @@ module WowAceDeserialization
       table[key] = value
     end
     data.slice!(0, 2) # remove ^t
-
-    keys = table.keys.sort
-    if keys == (1..keys.size).to_a
-      table.values
-    else
-      table
-    end
+    table
   end
 end
 
@@ -149,19 +158,3 @@ class WowAceSerializer
 
   # Any common methods or attributes for both serialization and deserialization can remain in the main class.
 end
-
-serializer = WowAceSerializer.new
-serialized_data = serializer.serialize({ 'hello' => 'world', 'test' => 123, 'float' => 123.456,
-                                         'nested' => [nil, nil, nil, 'test'] })
-puts serialized_data
-puts serializer.deserialize(serialized_data).inspect
-
-# Check positive infinity
-serialized_inf = serializer.serialize(Float::INFINITY)
-puts "Serialized Positive Infinity: #{serialized_inf}"
-puts "Deserialized: #{serializer.deserialize(serialized_inf).inspect}"
-
-# Check negative infinity
-serialized_neg_inf = serializer.serialize(-Float::INFINITY)
-puts "\nSerialized Negative Infinity: #{serialized_neg_inf}"
-puts "Deserialized: #{serializer.deserialize(serialized_neg_inf).inspect}"

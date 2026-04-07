@@ -17,7 +17,8 @@ class LuaDeflate
 
       # Strip leading and trailing whitespace.
       encoded_str = encoded_str.strip
-      return if encoded_str.length <= 1
+      return '' if encoded_str.empty?
+      return if encoded_str.length == 1
 
       decoded_bytes = encoded_str.chars.each_slice(4).flat_map do |char_group|
         # Convert each character in the chunk to its corresponding base64 index.

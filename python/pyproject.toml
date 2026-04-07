@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wow-serialization"
+version = "0.1.0"
+description = "WoW AddOn serialization formats: LuaDeflate, AceSerializer, LibSerialize"
+requires-python = ">=3.10"
+
+dependencies = ["cbor2>=5.4"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "pytest-describe>=2.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["wow_serialization*"]

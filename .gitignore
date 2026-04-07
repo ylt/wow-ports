@@ -1,0 +1,7 @@
+node_modules/
+.omc/
+lua/deps/
+__pycache__/
+*.pyc
+*.egg-info/
+testing/samples/

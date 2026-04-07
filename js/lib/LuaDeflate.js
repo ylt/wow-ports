@@ -9,13 +9,16 @@ class LuaDeflate {
 
     decodeForPrint(encodedStr) {
         if (typeof encodedStr !== "string") {
-            return;
+            return null;
         }
 
         // Strip leading and trailing whitespace.
         encodedStr = encodedStr.trim();
-        if (encodedStr.length <= 1) {
-            return;
+        if (encodedStr.length === 0) {
+            return '';
+        }
+        if (encodedStr.length === 1) {
+            return null;
         }
 
         const decodedBytes = [];
@@ -50,8 +53,11 @@ class LuaDeflate {
         }
 
         encodedStr = encodedStr.trim();
-        if (encodedStr.length <= 1) {
-            return;
+        if (encodedStr.length === 0) {
+            return new Uint8Array(0);
+        }
+        if (encodedStr.length === 1) {
+            return null;
         }
 
         const byteCount = Math.ceil(encodedStr.length * 6 / 8);
