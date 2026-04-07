@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate native test files for JS, Ruby, Python, and Lua from testdata/tests.yaml."""
+"""Generate native test files for JS, Ruby, Python, and Lua from testing/tests.yaml."""
 
 import re
 import sys
@@ -10,8 +10,8 @@ import jinja2
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-YAML_PATH = ROOT / "testdata" / "tests.yaml"
-TEMPLATE_DIR = ROOT / "templates"
+YAML_PATH = ROOT / "testing" / "tests.yaml"
+TEMPLATE_DIR = ROOT / "testing" / "templates"
 
 OUTPUT_MAP = {
     "ace_serializer": {

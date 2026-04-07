@@ -12,7 +12,7 @@ import zlib
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .lua_deflate import decode_for_print, encode_for_print
+from .lua_deflate_native import decode_for_print, encode_for_print
 from .ace_serializer import WowAce as _WowAce
 from .lib_serialize import deserialize as lib_deserialize, serialize as lib_serialize
 from .lib_compress import decompress as lib_compress_decompress

@@ -1,6 +1,6 @@
 'use strict';
 const zlib = require('zlib');
-const LuaDeflate = require('./LuaDeflate');
+const LuaDeflate = require('./LuaDeflateNative');
 const WowAceDeserializer = require('./WowAceDeserializer');
 const WowAceSerializer = require('./WowAceSerializer');
 const LibCompress = require('./LibCompress');

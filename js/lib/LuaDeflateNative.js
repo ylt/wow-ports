@@ -3,10 +3,12 @@ const B64_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678
 
 const luaToB64 = new Uint8Array(128);
 const b64ToLua = new Uint8Array(128);
+const validLua = new Uint8Array(128);
 
 for (let i = 0; i < 64; i++) {
     luaToB64[LUA_ALPHA.charCodeAt(i)] = B64_ALPHA.charCodeAt(i);
     b64ToLua[B64_ALPHA.charCodeAt(i)] = LUA_ALPHA.charCodeAt(i);
+    validLua[LUA_ALPHA.charCodeAt(i)] = 1;
 }
 
 class LuaDeflateNative {
@@ -56,7 +58,7 @@ class LuaDeflateNative {
         for (let i = 0; i < fullGroups; i += 4) {
             for (let k = 0; k < 4; k++) {
                 const code = encodedStr.charCodeAt(i + k);
-                if (code >= 128) return null;
+                if (code >= 128 || !validLua[code]) return null;
                 b64Chars[i + (3 - k)] = luaToB64[code];
             }
         }
@@ -67,7 +69,7 @@ class LuaDeflateNative {
             for (let k = 0; k < fill; k++) b64Chars[base + k] = 0x41; // 'A'
             for (let k = 0; k < r; k++) {
                 const code = encodedStr.charCodeAt(base + k);
-                if (code >= 128) return null;
+                if (code >= 128 || !validLua[code]) return null;
                 b64Chars[base + fill + (r - 1 - k)] = luaToB64[code];
             }
         }
@@ -85,9 +87,10 @@ class LuaDeflateNative {
     }
 
     decodeForPrint(encodedStr) {
-        if (typeof encodedStr !== 'string') return undefined;
+        if (typeof encodedStr !== 'string') return null;
         const trimmed = encodedStr.trim();
-        if (trimmed.length <= 1) return undefined;
+        if (trimmed.length === 0) return '';
+        if (trimmed.length === 1) return null;
         const decoded = this._decode(trimmed);
         if (decoded == null) return null;
         const byteCount = Math.floor(trimmed.length * 3 / 4);
@@ -95,9 +98,10 @@ class LuaDeflateNative {
     }
 
     decodeForPrint2(encodedStr) {
-        if (typeof encodedStr !== 'string') return undefined;
+        if (typeof encodedStr !== 'string') return null;
         const trimmed = encodedStr.trim();
-        if (trimmed.length <= 1) return undefined;
+        if (trimmed.length === 0) return new Uint8Array(0);
+        if (trimmed.length === 1) return null;
         const decoded = this._decode(trimmed);
         if (decoded == null) return null;
         const byteCount = Math.ceil(trimmed.length * 6 / 8);

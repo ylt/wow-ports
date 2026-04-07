@@ -3,7 +3,8 @@
 require 'zlib'
 require 'base64'
 require 'set'
-require_relative 'lua_deflate'
+require_relative 'lua_deflate_native'
+LuaDeflate = LuaDeflateNative
 require_relative 'wowace'
 require_relative 'lib_serialize'
 require_relative 'lib_compress'

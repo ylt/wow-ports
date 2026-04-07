@@ -4,4 +4,4 @@ lua/deps/
 __pycache__/
 *.pyc
 *.egg-info/
-testdata/samples/
+testing/samples/

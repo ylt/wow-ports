@@ -41,7 +41,11 @@ class LuaDeflateNative
 
       # Step 1: Strip whitespace, validate length
       encoded_str = encoded_str.strip
-      return nil if encoded_str.length <= 1
+      return '' if encoded_str.empty?
+      return nil if encoded_str.length == 1
+
+      # Validate all chars are in the WoW alphabet
+      return nil unless encoded_str.match?(/\A[a-zA-Z0-9()]+\z/)
 
       pre_padding_length = encoded_str.length
 

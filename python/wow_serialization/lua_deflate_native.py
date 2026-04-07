@@ -70,14 +70,23 @@ def encode_for_print(data: bytes) -> str:
     return translated[:output_length]
 
 
-def decode_for_print(encoded: str) -> bytes:
+def decode_for_print(encoded) -> bytes:
     """Decode a WoW custom base64 string (stdlib base64 variant)."""
+    if isinstance(encoded, (bytes, bytearray)):
+        encoded = encoded.decode("latin-1")
     if not isinstance(encoded, str):
-        raise TypeError(f"Expected str, got {type(encoded).__name__}")
+        return None
 
     encoded = encoded.strip()
-    if len(encoded) <= 1:
+    if len(encoded) == 0:
         return b""
+    if len(encoded) == 1:
+        return None
+
+    # Validate all chars are in the WoW alphabet
+    import re
+    if not re.fullmatch(r'[a-zA-Z0-9()]+', encoded):
+        return None
 
     pre_padding_length = len(encoded)
 

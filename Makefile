@@ -31,4 +31,4 @@ install-lua:
 	./lua/fetch-deps.sh
 
 generate-tests:
-	cd scripts && uv run generate-tests.py
+	cd testing && uv run generate-tests.py
