@@ -1,4 +1,4 @@
-# WoW Ports — Serialization Protocol Specification
+# Azerite — Serialization Protocol Specification
 
 This document describes the two serialization protocols implemented in this repository: the **WoW Ace Serialization** format and the **LuaDeflate Encoding** scheme. Both originate from World of Warcraft AddOn Lua libraries.
 

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+module Azerite
 module WowAceSerialization
   def serialize(obj)
     "^1#{serialize_internal(obj)}^^"
@@ -157,4 +158,5 @@ class WowAceSerializer
   include WowAceDeserialization
 
   # Any common methods or attributes for both serialization and deserialization can remain in the main class.
+end
 end

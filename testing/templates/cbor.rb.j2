@@ -4,6 +4,10 @@
 require_relative '../wow_cbor'
 require_relative '../pipeline'
 
+WowCbor = Azerite::WowCbor
+Pipeline = Azerite::Pipeline unless defined?(Pipeline)
+ExportResult = Azerite::ExportResult unless defined?(ExportResult)
+
 RSpec.describe 'WowCbor' do
 {% for section_name, section_tests in sections %}
 

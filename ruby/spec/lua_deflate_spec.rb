@@ -2,8 +2,9 @@
 # frozen_string_literal: true
 
 require_relative 'spec_helper'
-require_relative '../lua_deflate_native'
-LuaDeflate = LuaDeflateNative
+require_relative '../lib/azerite/lua_deflate_native'
+LuaDeflateNative = Azerite::LuaDeflateNative unless defined?(LuaDeflateNative)
+LuaDeflate = Azerite::LuaDeflateNative unless defined?(LuaDeflate)
 
 RSpec.describe 'LuaDeflate' do
 

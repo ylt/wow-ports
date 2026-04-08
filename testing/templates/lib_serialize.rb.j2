@@ -3,6 +3,10 @@
 
 require_relative '../lib_serialize'
 
+LibSerialize = Azerite::LibSerialize unless defined?(LibSerialize)
+LibSerializeSerialize = Azerite::LibSerializeSerialize unless defined?(LibSerializeSerialize)
+LibSerializeDeserialize = Azerite::LibSerializeDeserialize unless defined?(LibSerializeDeserialize)
+
 RSpec.describe 'LibSerialize' do
   def ser(obj)
     LibSerializeSerialize.serialize(obj)

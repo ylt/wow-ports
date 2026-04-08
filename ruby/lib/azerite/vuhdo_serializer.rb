@@ -16,6 +16,7 @@
 #
 # Key abbreviations: short keys like *c expand to full names (color, etc.)
 
+module Azerite
 module VuhDoSerializer
   ABBREV_TO_KEY = {
     '*a' => 'isFullDuration',
@@ -130,4 +131,5 @@ module VuhDoSerializer
   end
 
   private_class_method :read_length_value
+end
 end

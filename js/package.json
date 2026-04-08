@@ -1,8 +1,31 @@
 {
-  "name": "wow-ports",
-  "version": "1.0.0",
-  "main": "lib/LuaDeflate.js",
+  "name": "azerite",
+  "version": "0.1.0",
+  "description": "Decode and encode WoW addon export strings (WeakAuras, ElvUI, Plater, MDT, VuhDo, and more)",
+  "main": "index.js",
+  "files": [
+    "lib/",
+    "index.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "author": "Joe Carter <theupperquartile@gmail.com>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ylt/azerite.git"
+  },
+  "homepage": "https://github.com/ylt/azerite",
+  "keywords": [
+    "wow",
+    "world-of-warcraft",
+    "weakauras",
+    "elvui",
+    "plater",
+    "addon",
+    "serialization",
+    "codec"
+  ],
   "dependencies": {
     "cbor-x": "^1.5.4"
   }

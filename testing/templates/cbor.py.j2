@@ -3,7 +3,7 @@
 
 import cbor2
 import pytest
-from wow_serialization.wow_cbor import WowCbor
+from azerite.wow_cbor import WowCbor
 
 
 def describe_WowCbor():
@@ -55,17 +55,17 @@ def describe_WowCbor():
             assert result['{{ key }}'] == {{ render_input(val, 'python', module) }}
           {% endfor %}
         {% elif t.type == 'plater_v2_encode' %}
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data={{ render_table(t.input, 'python', module) }}, metadata=None))
             assert enc.startswith('!PLATER:2!')
         {% elif t.type == 'plater_v2_decode' %}
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data={{ render_table(t.input, 'python', module) }}, metadata=None))
             dec = Pipeline.decode(enc)
             assert dec.addon == 'plater'
             assert dec.version == 2
         {% elif t.type == 'plater_v2_roundtrip' %}
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             data = {{ render_table(t.input, 'python', module) }}
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data=data, metadata=None))
             dec = Pipeline.decode(enc)
@@ -73,7 +73,7 @@ def describe_WowCbor():
             assert dec.data['{{ key }}'] == {{ render_input(val, 'python', module) }}
           {% endfor %}
         {% elif t.type == 'plater_v2_detection' %}
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data={{ render_input(t.input, 'python', module) }}, metadata=None))
             assert enc.startswith('!PLATER:2!')
             dec = Pipeline.decode(enc)

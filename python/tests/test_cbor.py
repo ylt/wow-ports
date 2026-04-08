@@ -3,7 +3,7 @@
 
 import cbor2
 import pytest
-from wow_serialization.wow_cbor import WowCbor
+from azerite.wow_cbor import WowCbor
 
 
 def describe_WowCbor():
@@ -83,13 +83,13 @@ def describe_WowCbor():
     def describe_d_plater_v2_prefix():
         def it_D1_encodes_with_plater_2_prefix():
             """D1: encodes with !PLATER:2! prefix"""
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data={ 'x': 1 }, metadata=None))
             assert enc.startswith('!PLATER:2!')
 
         def it_D2_decodes_plater_2_to_plater_v2():
             """D2: decodes !PLATER:2! to plater v2"""
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data={ 'x': 1 }, metadata=None))
             dec = Pipeline.decode(enc)
             assert dec.addon == 'plater'
@@ -97,7 +97,7 @@ def describe_WowCbor():
 
         def it_D3_plater_v2_round_trip_preserves_data():
             """D3: Plater v2 round-trip preserves data"""
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             data = { 'profile': 'Default', 'enabled': True, 'level': 5 }
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data=data, metadata=None))
             dec = Pipeline.decode(enc)
@@ -107,7 +107,7 @@ def describe_WowCbor():
 
         def it_D4_plater_2_is_detected_before_catch_all():
             """D4: !PLATER:2! is detected before ! catch-all"""
-            from wow_serialization.pipeline import Pipeline, ExportResult
+            from azerite.pipeline import Pipeline, ExportResult
             enc = Pipeline.encode(ExportResult(addon='plater', version=2, data='test', metadata=None))
             assert enc.startswith('!PLATER:2!')
             dec = Pipeline.decode(enc)

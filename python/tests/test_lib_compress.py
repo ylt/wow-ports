@@ -1,7 +1,7 @@
 """Tests for LibCompress decompression."""
 
 import pytest
-from wow_serialization.lib_compress import decompress, LibCompressError
+from azerite.lib_compress import decompress, LibCompressError
 
 
 def describe_LibCompress():

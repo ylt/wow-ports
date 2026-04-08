@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require 'benchmark'
-require_relative 'lua_deflate'
-require_relative 'lua_deflate_native'
+require_relative 'lib/azerite/lua_deflate'
+require_relative 'lib/azerite/lua_deflate_native'
+
+LuaDeflate = Azerite::LuaDeflate
+LuaDeflateNative = Azerite::LuaDeflateNative
 
 # ---------------------------------------------------------------------------
 # Helpers

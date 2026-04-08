@@ -4,7 +4,7 @@
 import math
 import re
 import pytest
-from wow_serialization.ace_serializer import WowAce, WowAceDeserializer, WowAceSerializer
+from azerite.ace_serializer import WowAce, WowAceDeserializer, WowAceSerializer
 
 
 @pytest.fixture

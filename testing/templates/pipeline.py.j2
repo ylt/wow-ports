@@ -2,7 +2,7 @@
 """Tests for Pipeline encode/decode."""
 
 import pytest
-from wow_serialization.pipeline import Pipeline, ExportResult
+from azerite.pipeline import Pipeline, ExportResult
 
 
 def roundtrip(addon, version, data, metadata=None):

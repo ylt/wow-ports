@@ -3,6 +3,8 @@
 
 require 'spec_helper'
 
+WowAceSerializer = Azerite::WowAceSerializer unless defined?(WowAceSerializer)
+
 RSpec.describe 'WowAceSerializer' do
   let(:s) { WowAceSerializer.new }
 

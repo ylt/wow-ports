@@ -1,47 +1,36 @@
-# wow-ports
+# azerite
 
 Ports of WoW (World of Warcraft) addon serialization formats from Lua to JavaScript, Python, and Ruby.
 
 Decode and re-encode export strings from WeakAuras, ElvUI, Plater, MDT, VuhDo, Cell, BigWigs, GSE, TotalRP3, DBM, and more.
 
+## Packages
+
+| Language | Package | Install | Docs |
+|----------|---------|---------|------|
+| JavaScript | [azerite](https://www.npmjs.com/package/azerite) | `npm install azerite` | [js/README.md](js/README.md) |
+| Ruby | [azerite](https://rubygems.org/gems/azerite) | `gem install azerite` | [ruby/README.md](ruby/README.md) |
+| Python | [azerite](https://pypi.org/project/azerite/) | `pip install azerite` | [python/README.md](python/README.md) |
+
 ## Quick start
 
-```ruby
-require_relative 'ruby/pipeline'
-
-result = Pipeline.decode("!WA:2!nZ...)  # auto-detects addon format
-result.data    # => deserialized Lua table as Ruby hash
-result.addon   # => "weakauras"
-result.steps   # => [:prefix, :encode_for_print, :zlib, :lib_serialize]
-
-Pipeline.encode(result)  # => re-encoded export string
+```javascript
+const { Pipeline } = require('azerite');
+const result = Pipeline.decode('!WA:2!nZ...');
+// result.data, result.addon, result.steps
+Pipeline.encode(result);
 ```
 
-```javascript
-const Pipeline = require('./js/lib/Pipeline');
-
-const result = Pipeline.decode('!WA:2!nZ...');
-result.data;   // deserialized object
-result.steps;  // ['prefix', 'encode_for_print', 'zlib', 'lib_serialize']
-
-Pipeline.encode(result); // re-encoded string
+```ruby
+require "azerite"
+result = Pipeline.decode("!WA:2!nZ...")
+Pipeline.encode(result)
 ```
 
 ```python
-from wow_serialization.pipeline import Pipeline
-
+from azerite import Pipeline
 result = Pipeline.decode("!WA:2!nZ...")
-result.data    # deserialized dict
-result.steps   # ['prefix', 'encode_for_print', 'zlib', 'lib_serialize']
-
-Pipeline.encode(result)  # re-encoded string
-```
-
-You can also specify an addon by name or provide explicit steps:
-
-```ruby
-Pipeline.decode(str, addon: 'elvui')
-Pipeline.decode(str, steps: [:base64, :zlib, :cbor])
+Pipeline.encode(result)
 ```
 
 ## Supported addons
@@ -101,9 +90,9 @@ make generate-tests  # regenerate test files from templates
 ## Project structure
 
 ```
-js/lib/          JavaScript modules (CommonJS)
-ruby/            Ruby modules
-python/          Python package (wow_serialization)
+js/              JavaScript package (CommonJS)
+ruby/            Ruby gem (lib/azerite/)
+python/          Python package (azerite/)
 lua/             Lua reference implementations + test suite
 testing/         Test code generator, YAML manifest, and Jinja2 templates
 ```
@@ -113,6 +102,16 @@ testing/         Test code generator, YAML manifest, and Jinja2 templates
 - [PROTOCOL.md](PROTOCOL.md) -- AceSerializer and LuaDeflate wire format specification
 - [FORMATS.md](FORMATS.md) -- Per-addon export format documentation
 
+## Credits
+
+From-scratch implementations of the wire formats used by these WoW Lua libraries:
+
+- [LibDeflate](https://github.com/SafeteeWoW/LibDeflate) by Haoqian He — EncodeForPrint encoding ([zlib](https://github.com/SafeteeWoW/LibDeflate/blob/main/LICENSE.txt))
+- [AceSerializer-3.0](https://github.com/hurricup/WoW-Ace3) (Ace3) — type-prefixed text serialization ([BSD](https://github.com/hurricup/WoW-Ace3/blob/master/LICENSE.txt))
+- [LibSerialize](https://github.com/rossnichols/LibSerialize) by Ross Nichols — binary serialization with back-references ([MIT](https://github.com/rossnichols/LibSerialize/blob/main/LICENSE))
+- [LibCompress](https://github.com/WoWAddonMirrors/LibCompress) by jjsheets and Galmok — Huffman + LZW compression ([GPL v2](https://github.com/WoWAddonMirrors/LibCompress/blob/main/LibCompress.lua#L7))
+- [VuhDo](https://gitlab.vuhdo.io/vuhdo/vuhdo) — custom type-length-value serialization ([All Rights Reserved](https://gitlab.vuhdo.io/vuhdo/vuhdo/-/blob/master/LICENSE))
+
 ## License
 
-MIT
+ISC
