@@ -3,7 +3,8 @@
 
 require_relative 'spec_helper'
 require_relative '../lua_deflate_native'
-LuaDeflate = LuaDeflateNative
+LuaDeflateNative = Azerite::LuaDeflateNative unless defined?(LuaDeflateNative)
+LuaDeflate = Azerite::LuaDeflateNative unless defined?(LuaDeflate)
 
 RSpec.describe 'LuaDeflate' do
 {% for section_name, section_tests in sections %}

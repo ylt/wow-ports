@@ -3,7 +3,7 @@
 
 import re
 import pytest
-from wow_serialization.lua_deflate_native import decode_for_print, encode_for_print
+from azerite.lua_deflate_native import decode_for_print, encode_for_print
 
 
 def describe_LuaDeflate():

@@ -3,7 +3,7 @@
 
 import math
 import pytest
-from wow_serialization.lib_serialize import deserialize, serialize
+from azerite.lib_serialize import deserialize, serialize
 
 
 def roundtrip(obj):

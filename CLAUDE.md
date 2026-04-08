@@ -58,7 +58,7 @@ Clean-room implementation of Huffman + LZW decompression. **Not derived from GPL
 
 - **JS**: CommonJS throughout (`require`/`module.exports`). No ES6 imports. Depends on `cbor-x` (npm).
 - **Ruby**: Flat `ruby/*.rb` files with `require_relative`. Uses `Struct.new` for ExportResult. Depends on `cbor` gem.
-- **Python**: `wow_serialization` package. Uses dataclasses. Managed with `uv` and `pyproject.toml`. Test extras: `uv run --extra test`.
+- **Python**: `azerite` package. Uses dataclasses. Managed with `uv` and `pyproject.toml`. Test extras: `uv run --extra test`.
 - **Lua**: Reference implementations only (not ports). Lives in `lua/` with busted test framework. Dependencies fetched via `lua/fetch-deps.sh`.
 
 ## Key Documentation

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+module Azerite
 class LibSerialize
   EMBEDDED_INDEX_SHIFT = 2
   EMBEDDED_COUNT_SHIFT = 4
@@ -549,4 +550,5 @@ class LibSerializeSerialize < LibSerialize
       write_int(count, required)
     end
   end
+end
 end

@@ -2,6 +2,7 @@
 
 require 'base64'
 
+module Azerite
 class LuaDeflateNative
   # LuaDeflate custom alphabet: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()
   LUA_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()'.freeze
@@ -82,4 +83,5 @@ class LuaDeflateNative
       unreversed[0, byte_count]
     end
   end
+end
 end

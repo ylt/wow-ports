@@ -2,7 +2,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require_relative '../pipeline'
+require_relative '../lib/azerite/pipeline'
+
+Pipeline = Azerite::Pipeline unless defined?(Pipeline)
+ExportResult = Azerite::ExportResult unless defined?(ExportResult)
 
 RSpec.describe 'Pipeline' do
 

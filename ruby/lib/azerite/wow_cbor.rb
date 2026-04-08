@@ -5,6 +5,7 @@ require 'cbor'
 # WowCbor wraps the CBOR library with WoW-specific post-processing:
 # - CBOR byte strings (binary Ruby strings) are decoded to UTF-8 text
 # - Sequential 1-based integer-keyed maps are converted to arrays (Lua table convention)
+module Azerite
 class WowCbor
   class << self
     # Decode CBOR bytes to a Ruby value with WoW-specific post-processing.
@@ -50,4 +51,5 @@ class WowCbor
       sorted.map { |k| hash[k] }
     end
   end
+end
 end

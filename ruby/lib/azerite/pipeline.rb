@@ -4,12 +4,14 @@ require 'zlib'
 require 'base64'
 require 'set'
 require_relative 'lua_deflate_native'
-LuaDeflate = LuaDeflateNative
 require_relative 'wowace'
 require_relative 'lib_serialize'
 require_relative 'lib_compress'
 require_relative 'vuhdo_serializer'
 require_relative 'wow_cbor'
+
+module Azerite
+LuaDeflate = LuaDeflateNative
 
 ExportResult = Struct.new(:addon, :version, :data, :metadata, :steps)
 
@@ -402,4 +404,5 @@ class Pipeline
   ensure
     z&.close
   end
+end
 end

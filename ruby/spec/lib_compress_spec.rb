@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-require_relative '../lib_compress'
+require_relative '../lib/azerite/lib_compress'
+
+LibCompress = Azerite::LibCompress unless defined?(LibCompress)
 
 RSpec.describe 'LibCompress' do
   describe 'method 0x01 (uncompressed)' do

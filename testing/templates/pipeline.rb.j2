@@ -4,6 +4,9 @@
 require 'spec_helper'
 require_relative '../pipeline'
 
+Pipeline = Azerite::Pipeline unless defined?(Pipeline)
+ExportResult = Azerite::ExportResult unless defined?(ExportResult)
+
 RSpec.describe 'Pipeline' do
 {% for section_name, section_tests in sections %}
 

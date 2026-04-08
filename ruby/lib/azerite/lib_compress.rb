@@ -56,6 +56,7 @@
 #   Feed more bytes into the bitstream as needed.
 #   Stop when orig_size bytes have been emitted.
 
+module Azerite
 module LibCompress
   class Error < StandardError; end
 
@@ -245,4 +246,5 @@ module LibCompress
     end
     [unescaped, out_pos]
   end
+end
 end
