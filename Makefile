@@ -1,58 +1,55 @@
-PYTHON := uv run
-
-.PHONY: test test-js test-ruby test-python test-lua install install-js install-ruby install-python install-lua generate-tests typecheck typecheck-ts typecheck-ruby typecheck-python lint lint-ts lint-ruby lint-python
+.PHONY: test test-js test-ruby test-python test-lua \
+       install install-js install-ruby install-python install-lua \
+       typecheck typecheck-ts typecheck-ruby typecheck-python \
+       lint lint-ts lint-ruby lint-python \
+       generate-tests
 
 test: test-js test-ruby test-python test-lua
+install: install-js install-ruby install-python install-lua
+typecheck: typecheck-ts typecheck-ruby typecheck-python
+lint: lint-ts lint-ruby lint-python
 
 test-js:
-	cd js && bun test
+	$(MAKE) -C js test
 
 test-ruby:
-	cd ruby && bundle exec rspec spec/
+	$(MAKE) -C ruby test
 
 test-python:
-	cd python && uv run --extra test pytest tests/ -v
+	$(MAKE) -C python test
 
 test-lua:
 	cd lua && busted test/ --verbose
 
-install: install-js install-ruby install-python install-lua
-
 install-js:
-	cd js && bun install
+	$(MAKE) -C js install
 
 install-ruby:
-	cd ruby && bundle install
+	$(MAKE) -C ruby install
 
 install-python:
-	cd python && uv sync --extra test
+	$(MAKE) -C python install
 
 install-lua:
 	./lua/fetch-deps.sh
 
-generate-tests:
-	cd testing && uv run generate-tests.py
-
-typecheck: typecheck-ts typecheck-ruby typecheck-python
-
 typecheck-ts:
-	cd js && bunx tsc --noEmit
+	$(MAKE) -C js typecheck
 
 typecheck-ruby:
-	cd ruby && bundle exec srb tc
+	$(MAKE) -C ruby typecheck
 
 typecheck-python:
-	cd python && uvx pyrefly check
-
-lint: lint-ts lint-ruby lint-python
+	$(MAKE) -C python typecheck
 
 lint-ts:
-	cd js && bunx eslint lib/ test/ index.ts
-	cd js && bunx prettier --check 'lib/**/*.ts' 'test/**/*.ts' 'index.ts'
+	$(MAKE) -C js lint
 
 lint-ruby:
-	cd ruby && bundle exec rubocop
+	$(MAKE) -C ruby lint
 
 lint-python:
-	cd python && uvx ruff check azerite/
-	cd python && uvx ruff format --check azerite/
+	$(MAKE) -C python lint
+
+generate-tests:
+	cd testing && uv run generate-tests.py
