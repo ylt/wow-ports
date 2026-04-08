@@ -55,7 +55,6 @@ const NUMBER_INDICES: (number | null)[] = [
 const STRING_TYPE: (number | null)[] = [null, STR_8, STR_16, STR_24];
 const TABLE_TYPE: (number | null)[] = [null, TABLE_8, TABLE_16, TABLE_24];
 const ARRAY_TYPE: (number | null)[] = [null, ARRAY_8, ARRAY_16, ARRAY_24];
-const MIXED_TYPE: (number | null)[] = [null, MIXED_8, MIXED_16, MIXED_24];
 const STRING_REF_TYPE: (number | null)[] = [
   null,
   STRINGREF_8,

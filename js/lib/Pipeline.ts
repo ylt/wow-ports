@@ -178,7 +178,7 @@ function detectSteps(exportStr: string): Step[] {
     try {
       raw = zlib.inflateRawSync(Buffer.from(raw!, "binary")).toString("binary");
       steps.push("zlib");
-    } catch (_) {
+    } catch {
       return steps;
     }
   }

@@ -410,7 +410,7 @@ describe("N. Error handling", () => {
     let threw = false;
     try {
       de(wire);
-    } catch (e) {
+    } catch {
       threw = true;
     }
     if (!threw) {

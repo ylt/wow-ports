@@ -1,6 +1,10 @@
+plugins:
+  - rubocop-sorbet
+
 AllCops:
   NewCops: enable
   TargetRubyVersion: 3.0
+  SuggestExtensions: false
   Include:
     - 'lib/**/*.rb'
   Exclude:
@@ -38,6 +42,10 @@ Lint/HashCompareByIdentity:
 
 # Intentional duplicate branches in case/when for different types
 Lint/DuplicateBranch:
+  Enabled: false
+
+# ExportResult.data is intentionally T.untyped (deserialized Lua tables)
+Sorbet/ForbidUntypedStructProps:
   Enabled: false
 
 # Sorbet uses send() for dynamic dispatch

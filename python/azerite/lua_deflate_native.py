@@ -86,7 +86,8 @@ def decode_for_print(encoded: Any) -> bytes | None:
 
     # Validate all chars are in the WoW alphabet
     import re
-    if not re.fullmatch(r'[a-zA-Z0-9()]+', encoded):
+
+    if not re.fullmatch(r"[a-zA-Z0-9()]+", encoded):
         return None
 
     pre_padding_length = len(encoded)

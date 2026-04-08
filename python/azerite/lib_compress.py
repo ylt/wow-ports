@@ -28,6 +28,7 @@ def decompress(data: bytes) -> bytes:
 
 # ── LZW ──────────────────────────────────────────────────────────────────────
 
+
 def _decompress_lzw(data: bytes) -> bytes:
     pos = 1  # skip method byte
     dict_entries: dict[int, bytes] = {i: bytes([i]) for i in range(256)}
@@ -68,6 +69,7 @@ def _read_code(data: bytes, pos: int) -> tuple[int, int]:
 
 
 # ── Huffman ──────────────────────────────────────────────────────────────────
+
 
 def _decompress_huffman(data: bytes) -> bytes:
     buf_size = len(data)
