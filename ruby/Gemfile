@@ -5,3 +5,6 @@ source "https://rubygems.org"
 gemspec
 
 gem "rspec", "~> 3.12"
+gem "rubocop", "~> 1.75", group: :development
+gem "sorbet", group: :development
+gem "tapioca", group: :development

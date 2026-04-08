@@ -66,26 +66,26 @@ EMBEDDED_INDEX = {
 
 RI = READER_INDEX  # shorthand
 
-NUMBER_INDICES = [
-    None,
-    None,
+NUMBER_INDICES: list[int] = [
+    0,
+    0,
     RI["NUM_16_POS"],
     RI["NUM_24_POS"],
     RI["NUM_32_POS"],
-    None,
-    None,
+    0,
+    0,
     RI["NUM_64_POS"],
 ]
 
-TYPE_INDICES = {
-    "STRING": [None, RI["STR_8"], RI["STR_16"], RI["STR_24"]],
-    "TABLE": [None, RI["TABLE_8"], RI["TABLE_16"], RI["TABLE_24"]],
-    "ARRAY": [None, RI["ARRAY_8"], RI["ARRAY_16"], RI["ARRAY_24"]],
-    "MIXED": [None, RI["MIXED_8"], RI["MIXED_16"], RI["MIXED_24"]],
+TYPE_INDICES: dict[str, list[int]] = {
+    "STRING": [0, RI["STR_8"], RI["STR_16"], RI["STR_24"]],
+    "TABLE": [0, RI["TABLE_8"], RI["TABLE_16"], RI["TABLE_24"]],
+    "ARRAY": [0, RI["ARRAY_8"], RI["ARRAY_16"], RI["ARRAY_24"]],
+    "MIXED": [0, RI["MIXED_8"], RI["MIXED_16"], RI["MIXED_24"]],
 }
 
-STRING_REF_INDICES = [None, RI["STRINGREF_8"], RI["STRINGREF_16"], RI["STRINGREF_24"]]
-TABLE_REF_INDICES = [None, RI["TABLEREF_8"], RI["TABLEREF_16"], RI["TABLEREF_24"]]
+STRING_REF_INDICES: list[int] = [0, RI["STRINGREF_8"], RI["STRINGREF_16"], RI["STRINGREF_24"]]
+TABLE_REF_INDICES: list[int] = [0, RI["TABLEREF_8"], RI["TABLEREF_16"], RI["TABLEREF_24"]]
 
 
 def _get_required_bytes(value: int) -> int:

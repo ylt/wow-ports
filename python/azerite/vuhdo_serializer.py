@@ -61,9 +61,13 @@ def deserialize(s: str) -> dict:
             i, value = _read_length_value(s, eq + 1)
         elif vt == 'N':
             i, raw = _read_length_value(s, eq + 1)
+            if raw is None:
+                break
             value = float(raw) if '.' in raw else int(raw)
         elif vt == 'T':
             i, raw = _read_length_value(s, eq + 1)
+            if raw is None:
+                break
             value = deserialize(raw)
         elif vt == '1':
             value = True

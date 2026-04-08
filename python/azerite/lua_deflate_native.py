@@ -27,6 +27,7 @@ Decode:
 
 import base64
 import math
+from typing import Any
 
 _STD_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 _WOW_ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()"
@@ -70,7 +71,7 @@ def encode_for_print(data: bytes) -> str:
     return translated[:output_length]
 
 
-def decode_for_print(encoded) -> bytes:
+def decode_for_print(encoded: Any) -> bytes | None:
     """Decode a WoW custom base64 string (stdlib base64 variant)."""
     if isinstance(encoded, (bytes, bytearray)):
         encoded = encoded.decode("latin-1")

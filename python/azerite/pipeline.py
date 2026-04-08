@@ -10,7 +10,7 @@ import base64
 import re
 import zlib
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Literal, TypedDict
 
 from .lua_deflate_native import decode_for_print, encode_for_print
 from .ace_serializer import WowAce as _WowAce
@@ -25,14 +25,29 @@ try:
 except ImportError:
     _WowCbor = None
 
+StepName = Literal[
+    'prefix', 'metadata', 'encode_for_print', 'base64', 'zlib',
+    'lib_compress', 'ace_serializer', 'lib_serialize', 'cbor', 'vuhdo',
+]
+
+# A step is either a step name string or a dict like {'prefix': '!WA:2!'}
+Step = StepName | dict[str, str | re.Pattern[str]]
+
+
+class FormatConfig(TypedDict):
+    addon: str
+    version: int
+    prefix: str | re.Pattern[str]
+    steps: list[Step]
+
 
 @dataclass
 class ExportResult:
-    addon: str
-    version: int
+    addon: str | None
+    version: int | None
     data: Any
-    metadata: Optional[dict]
-    steps: Optional[list] = field(default=None)
+    metadata: dict[str, str] | None
+    steps: list[Step] | None = field(default=None)
 
 
 # ── Step registry ────────────────────────────────────────────────────────────
@@ -52,7 +67,7 @@ STEPS = {
 
 # ── Format definitions ───────────────────────────────────────────────────────
 
-AUTO_FORMATS = [
+AUTO_FORMATS: list[FormatConfig] = [
     {'addon': 'plater',    'version': 2, 'prefix': '!PLATER:2!',
      'steps': [{'prefix': '!PLATER:2!'}, 'base64', 'zlib', 'cbor']},
     {'addon': 'weakauras', 'version': 2, 'prefix': '!WA:2!',
@@ -65,7 +80,7 @@ AUTO_FORMATS = [
      'steps': ['encode_for_print', 'zlib', 'ace_serializer']},
 ]
 
-FORMATS = {
+FORMATS: dict[str, list[Step]] = {
     'plater':    AUTO_FORMATS[0]['steps'],
     'weakauras': AUTO_FORMATS[1]['steps'],
     'elvui':     AUTO_FORMATS[2]['steps'],
@@ -84,11 +99,11 @@ def _resolve(step: str, direction: str) -> str:
     return pair[0] if direction == 'decode' else pair[1]
 
 
-def find_format(addon: str, version: int) -> dict | None:
+def find_format(addon: str, version: int) -> FormatConfig | None:
     return next((f for f in AUTO_FORMATS if f['addon'] == addon and f['version'] == version), None)
 
 
-def _run_steps(pipeline, steps, direction: str):
+def _run_steps(pipeline: 'Pipeline', steps: list[Step], direction: str) -> None:
     for step in steps:
         if isinstance(step, dict):
             name, arg = next(iter(step.items()))
@@ -99,9 +114,9 @@ def _run_steps(pipeline, steps, direction: str):
 
 # ── Heuristic detection ──────────────────────────────────────────────────────
 
-def detect_steps(export_str: str) -> list:
+def detect_steps(export_str: str) -> list[Step]:
     raw = export_str.strip()
-    steps = []
+    steps: list[Step] = []
 
     # Layer 1: prefix
     bang_match = re.match(r'^![A-Z][\w:]*!', raw)
@@ -159,22 +174,22 @@ def detect_steps(export_str: str) -> list:
 
 
 class Pipeline:
-    def __init__(self):
+    def __init__(self) -> None:
         self.raw: str = ''
-        self.addon: str = ''
-        self.version: int = 0
+        self.addon: str | None = ''
+        self.version: int | None = 0
         self.prefix: str = ''
-        self.metadata: Optional[dict] = None
+        self.metadata: dict[str, str] | None = None
         self.compressed: bytes = b''
         self.serialized: bytes = b''
         self.data: Any = None
-        self.format: dict = {}
-        self._steps: list = []
+        self.format: FormatConfig | None = None
+        self._steps: list[Step] = []
 
     # ── Public API ────────────────────────────────────────────────────────────
 
     @classmethod
-    def decode(cls, export_str: str, addon: str | None = None, steps: list | None = None) -> ExportResult:
+    def decode(cls, export_str: str, addon: str | None = None, steps: list[Step] | None = None) -> ExportResult:
         p = cls()
         p.raw = export_str.strip()
         if steps is None:
@@ -201,7 +216,7 @@ class Pipeline:
         return p.result()
 
     @classmethod
-    def encode(cls, export_result: ExportResult, addon: str | None = None, steps: list | None = None) -> str:
+    def encode(cls, export_result: ExportResult, addon: str | None = None, steps: list[Step] | None = None) -> str:
         p = cls()
         p.addon = export_result.addon
         p.version = export_result.version
@@ -215,7 +230,7 @@ class Pipeline:
             elif export_result.steps:
                 steps = export_result.steps
             else:
-                fmt = find_format(export_result.addon, export_result.version)
+                fmt = find_format(export_result.addon or '', export_result.version or 0)
                 if not fmt:
                     raise ValueError(f"Unknown format: {export_result.addon} v{export_result.version}")
                 steps = fmt['steps']
@@ -225,13 +240,15 @@ class Pipeline:
     # ── Format detection (legacy) ─────────────────────────────────────────────
 
     def detect_format(self) -> 'Pipeline':
-        self.format = next(
-            (f for f in AUTO_FORMATS if f['prefix'] and self.raw.startswith(f['prefix'])),
+        fmt = next(
+            (f for f in AUTO_FORMATS if f['prefix'] and isinstance(f['prefix'], str) and self.raw.startswith(f['prefix'])),
             AUTO_FORMATS[-1],
         )
-        self.addon = self.format['addon']
-        self.version = self.format['version']
-        self.prefix = self.format['prefix']
+        self.format = fmt
+        self.addon = fmt['addon']
+        self.version = fmt['version']
+        prefix = fmt['prefix']
+        self.prefix = prefix if isinstance(prefix, str) else ''
         return self
 
     # ── Decode step implementations ───────────────────────────────────────────
@@ -255,8 +272,8 @@ class Pipeline:
             meta_part = text[meta_idx + 4:]
             parts = meta_part.split('::')
             self.metadata = {
-                'profile_type': parts[0] if len(parts) > 0 else None,
-                'profile_key': parts[1] if len(parts) > 1 else None,
+                'profile_type': parts[0] if len(parts) > 0 else '',
+                'profile_key': parts[1] if len(parts) > 1 else '',
             }
             self.serialized = text[:meta_idx + 2].encode('latin-1')
         return self

@@ -84,7 +84,7 @@ def _decompress_huffman(data: bytes) -> bytes:
     byte_pos = 5  # first byte after header
 
     code_map: dict[int, dict[int, int]] = {}  # map[code_len][code] = symbol_byte
-    min_code_len = None
+    min_code_len: int = 0
     max_code_len = 0
     symbols_read = 0
     state = "symbol"
@@ -111,7 +111,7 @@ def _decompress_huffman(data: bytes) -> bytes:
                 if ul not in code_map:
                     code_map[ul] = {}
                 code_map[ul][unescaped] = symbol
-                if min_code_len is None or ul < min_code_len:
+                if min_code_len == 0 or ul < min_code_len:
                     min_code_len = ul
                 if ul > max_code_len:
                     max_code_len = ul

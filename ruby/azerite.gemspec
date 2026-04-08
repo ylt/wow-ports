@@ -20,4 +20,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "cbor", "~> 0.5"
   spec.add_dependency "base64", "~> 0.2"
+  spec.add_dependency "sorbet-runtime", "~> 0.5"
 end

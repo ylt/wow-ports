@@ -1,18 +1,28 @@
+# typed: false
+# frozen_string_literal: true
+
+require 'sorbet-runtime'
+
 module Azerite
   class LuaDeflate
+    extend T::Sig
+
     # Define a custom base64 character set.
-    BYTE_TO_BIT = [
+    BYTE_TO_BIT = T.let([
       *'a'..'z',
       *'A'..'Z',
       *'0'..'9',
       '(',
       ')'
-    ].freeze
+    ].freeze, T::Array[String])
 
     # Create a reverse lookup hash from the custom base64 character set.
-    BIT_TO_BYTE = BYTE_TO_BIT.each.with_index.to_a.to_h.freeze
+    BIT_TO_BYTE = T.let(BYTE_TO_BIT.each.with_index.to_a.to_h.freeze, T::Hash[String, Integer])
 
     class << self
+      extend T::Sig
+
+      sig { params(encoded_str: String).returns(T.nilable(String)) }
       def decode_for_print(encoded_str)
         return unless encoded_str.is_a?(String)
 
@@ -27,7 +37,7 @@ module Azerite
           return nil if indices.include?(nil)
 
           # Calculate the 24-bit number represented by the chunk.
-          value = indices.each_with_index.sum { |index, idx| index * (64**idx) }
+          value = T.cast(indices.each_with_index.sum { |index, idx| T.must(index) * (64**idx) }, Integer)
 
           # Determine the number of bytes this chunk should produce.
           bytes_to_take = char_group.length == 4 ? 3 : char_group.length - 1
@@ -39,15 +49,14 @@ module Azerite
         decoded_bytes.join
       end
 
+      sig { params(str: String).returns(String) }
       def encode_for_print(str)
-        raise ArgumentError, "Expected 'str' to be a string, got #{str.class}" unless str.is_a?(String)
-
         encoded_chunks = str.chars.each_slice(3).map do |byte_group|
           # Convert characters to their ASCII byte values.
           bytes = byte_group.map(&:ord)
 
           # Calculate the 24-bit number represented by the 3 bytes.
-          value = bytes.each_with_index.sum { |byte, idx| byte * (256**idx) }
+          value = T.cast(bytes.each_with_index.sum { |byte, idx| byte * (256**idx) }, Integer)
 
           # Determine the number of chunks this group should produce.
           chunks_to_take = byte_group.length + 1
@@ -56,7 +65,7 @@ module Azerite
           chunks_to_take.times.map { |idx| BYTE_TO_BIT[(value >> (6 * idx)) & 0x3F] }
         end
 
-        encoded_chunks.flatten.join
+        encoded_chunks.join
       end
     end
   end

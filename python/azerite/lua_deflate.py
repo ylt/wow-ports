@@ -11,7 +11,7 @@ See lua_deflate_native.py for the stdlib base64 variant.
 
 CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()"
 _BYTE_TO_BIT = list(CHARSET)
-_BIT_TO_BYTE = {ch: i for i, ch in enumerate(_BYTE_TO_BIT)}
+_BIT_TO_BYTE: dict[str, int] = {ch: i for i, ch in enumerate(_BYTE_TO_BIT)}
 
 
 def encode_for_print(data: bytes) -> str:

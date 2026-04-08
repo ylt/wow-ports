@@ -1,0 +1,45 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.0
+  Include:
+    - 'lib/**/*.rb'
+  Exclude:
+    - 'spec/**/*'
+    - 'sorbet/**/*'
+    - 'benchmark.rb'
+
+# Serialization code has inherently complex methods
+Metrics:
+  Enabled: false
+
+# snake_case_2 style is fine for serialization variable names
+Naming/VariableNumber:
+  Enabled: false
+
+# Short param names (b, n, s) are idiomatic in serialization code
+Naming/MethodParameterName:
+  Enabled: false
+
+# Not adding docs to every internal class/module
+Style/Documentation:
+  Enabled: false
+
+# Float comparison is intentional in serialization (matching Lua behaviour)
+Lint/FloatComparison:
+  Enabled: false
+
+# T::Struct doesn't need super
+Lint/MissingSuper:
+  Enabled: false
+
+# Symbol keys in hash comparison is intentional
+Lint/HashCompareByIdentity:
+  Enabled: false
+
+# Intentional duplicate branches in case/when for different types
+Lint/DuplicateBranch:
+  Enabled: false
+
+# Sorbet uses send() for dynamic dispatch
+Style/SendWithLiteralMethodName:
+  Enabled: false
