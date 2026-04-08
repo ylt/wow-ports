@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/ylt/azerite"
 
-  spec.files = Dir["lib/**/*.rb", "LICENSE", "README.md"]
+  spec.files = Dir["lib/**/*.rb", "sorbet/rbi/shims/**/*.rbi", "LICENSE", "README.md"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "cbor", "~> 0.5"
