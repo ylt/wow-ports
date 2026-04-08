@@ -66,26 +66,36 @@ EMBEDDED_INDEX = {
 
 RI = READER_INDEX  # shorthand
 
-NUMBER_INDICES = [
-    None,
-    None,
+NUMBER_INDICES: list[int] = [
+    0,
+    0,
     RI["NUM_16_POS"],
     RI["NUM_24_POS"],
     RI["NUM_32_POS"],
-    None,
-    None,
+    0,
+    0,
     RI["NUM_64_POS"],
 ]
 
-TYPE_INDICES = {
-    "STRING": [None, RI["STR_8"], RI["STR_16"], RI["STR_24"]],
-    "TABLE": [None, RI["TABLE_8"], RI["TABLE_16"], RI["TABLE_24"]],
-    "ARRAY": [None, RI["ARRAY_8"], RI["ARRAY_16"], RI["ARRAY_24"]],
-    "MIXED": [None, RI["MIXED_8"], RI["MIXED_16"], RI["MIXED_24"]],
+TYPE_INDICES: dict[str, list[int]] = {
+    "STRING": [0, RI["STR_8"], RI["STR_16"], RI["STR_24"]],
+    "TABLE": [0, RI["TABLE_8"], RI["TABLE_16"], RI["TABLE_24"]],
+    "ARRAY": [0, RI["ARRAY_8"], RI["ARRAY_16"], RI["ARRAY_24"]],
+    "MIXED": [0, RI["MIXED_8"], RI["MIXED_16"], RI["MIXED_24"]],
 }
 
-STRING_REF_INDICES = [None, RI["STRINGREF_8"], RI["STRINGREF_16"], RI["STRINGREF_24"]]
-TABLE_REF_INDICES = [None, RI["TABLEREF_8"], RI["TABLEREF_16"], RI["TABLEREF_24"]]
+STRING_REF_INDICES: list[int] = [
+    0,
+    RI["STRINGREF_8"],
+    RI["STRINGREF_16"],
+    RI["STRINGREF_24"],
+]
+TABLE_REF_INDICES: list[int] = [
+    0,
+    RI["TABLEREF_8"],
+    RI["TABLEREF_16"],
+    RI["TABLEREF_24"],
+]
 
 
 def _get_required_bytes(value: int) -> int:
@@ -113,6 +123,7 @@ def _get_required_bytes_number(value: int) -> int:
 # ---------------------------------------------------------------------------
 # Deserializer
 # ---------------------------------------------------------------------------
+
 
 class LibSerializeDeserializer:
     def __init__(self, data: bytes) -> None:
@@ -299,6 +310,7 @@ class LibSerializeDeserializer:
 # Serializer
 # ---------------------------------------------------------------------------
 
+
 class LibSerializeSerializer:
     def __init__(self, data) -> None:
         self._data = data
@@ -333,11 +345,17 @@ class LibSerializeSerializer:
         if required == 4:
             return struct.pack(">I", n)
         if required == 7:
-            return bytes([
-                (n >> 48) & 0xFF, (n >> 40) & 0xFF, (n >> 32) & 0xFF,
-                (n >> 24) & 0xFF, (n >> 16) & 0xFF, (n >> 8) & 0xFF,
-                n & 0xFF,
-            ])
+            return bytes(
+                [
+                    (n >> 48) & 0xFF,
+                    (n >> 40) & 0xFF,
+                    (n >> 32) & 0xFF,
+                    (n >> 24) & 0xFF,
+                    (n >> 16) & 0xFF,
+                    (n >> 8) & 0xFF,
+                    n & 0xFF,
+                ]
+            )
         raise ValueError(f"Invalid required bytes: {required}")
 
     def _write_int(self, n: int, required: int) -> None:
@@ -386,7 +404,11 @@ class LibSerializeSerializer:
     def _serialize_float(self, num: float) -> None:
         num_abs = abs(num)
         as_string = str(num_abs)
-        if len(as_string) < 7 and float(as_string) == num_abs and num_abs != float("inf"):
+        if (
+            len(as_string) < 7
+            and float(as_string) == num_abs
+            and num_abs != float("inf")
+        ):
             sign = 1 if num < 0 else 0
             self._write_byte((sign + RI["NUM_FLOATSTR_POS"]) << 3)
             encoded = as_string.encode()
@@ -481,7 +503,8 @@ class LibSerializeSerializer:
             length = len(keys)
             # Detect Lua-style array: sequential 1-based integer keys (int or str)
             if length > 0 and all(
-                (isinstance(k, int) and k == i + 1) or (isinstance(k, str) and k == str(i + 1))
+                (isinstance(k, int) and k == i + 1)
+                or (isinstance(k, str) and k == str(i + 1))
                 for i, k in enumerate(keys)
             ):
                 self._write_type_with_count("ARRAY", length)
@@ -513,6 +536,7 @@ class LibSerializeSerializer:
 # ---------------------------------------------------------------------------
 # Convenience functions
 # ---------------------------------------------------------------------------
+
 
 def serialize(obj) -> bytes:
     return LibSerializeSerializer.serialize(obj)

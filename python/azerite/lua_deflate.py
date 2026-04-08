@@ -11,7 +11,7 @@ See lua_deflate_native.py for the stdlib base64 variant.
 
 CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()"
 _BYTE_TO_BIT = list(CHARSET)
-_BIT_TO_BYTE = {ch: i for i, ch in enumerate(_BYTE_TO_BIT)}
+_BIT_TO_BYTE: dict[str, int] = {ch: i for i, ch in enumerate(_BYTE_TO_BIT)}
 
 
 def encode_for_print(data: bytes) -> str:
@@ -25,7 +25,7 @@ def encode_for_print(data: bytes) -> str:
         # Build little-endian 24-bit value from up to 3 bytes
         value = 0
         for shift, byte in enumerate(group):
-            value += byte * (256 ** shift)
+            value += byte * (256**shift)
         # N bytes → N+1 chars
         for idx in range(len(group) + 1):
             out.append(_BYTE_TO_BIT[(value >> (6 * idx)) & 0x3F])
@@ -62,7 +62,7 @@ def decode_for_print(encoded) -> bytes | None:
         # Build little-endian value
         value = 0
         for pos, idx in enumerate(indices):
-            value += idx * (64 ** pos)
+            value += idx * (64**pos)
 
         # N chars → N-1 bytes
         bytes_to_take = 3 if len(group) == 4 else len(group) - 1

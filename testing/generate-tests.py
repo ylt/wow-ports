@@ -15,30 +15,30 @@ TEMPLATE_DIR = ROOT / "testing" / "templates"
 
 OUTPUT_MAP = {
     "ace_serializer": {
-        "js": ROOT / "js" / "test" / "ace_serializer.test.js",
+        "js": ROOT / "js" / "test" / "ace_serializer.test.ts",
         "ruby": ROOT / "ruby" / "spec" / "wowace_spec.rb",
         "python": ROOT / "python" / "tests" / "test_ace_serializer.py",
         "lua": ROOT / "lua" / "test" / "ace_serializer_spec.lua",
     },
     "lua_deflate": {
-        "js": ROOT / "js" / "test" / "lua_deflate.test.js",
+        "js": ROOT / "js" / "test" / "lua_deflate.test.ts",
         "ruby": ROOT / "ruby" / "spec" / "lua_deflate_spec.rb",
         "python": ROOT / "python" / "tests" / "test_lua_deflate.py",
         "lua": ROOT / "lua" / "test" / "lua_deflate_spec.lua",
     },
     "lib_serialize": {
-        "js": ROOT / "js" / "test" / "lib_serialize.test.js",
+        "js": ROOT / "js" / "test" / "lib_serialize.test.ts",
         "ruby": ROOT / "ruby" / "spec" / "lib_serialize_spec.rb",
         "python": ROOT / "python" / "tests" / "test_lib_serialize.py",
         "lua": ROOT / "lua" / "test" / "lib_serialize_spec.lua",
     },
     "cbor": {
-        "js": ROOT / "js" / "test" / "cbor.test.js",
+        "js": ROOT / "js" / "test" / "cbor.test.ts",
         "ruby": ROOT / "ruby" / "spec" / "cbor_spec.rb",
         "python": ROOT / "python" / "tests" / "test_cbor.py",
     },
     "pipeline": {
-        "js": ROOT / "js" / "test" / "pipeline.test.js",
+        "js": ROOT / "js" / "test" / "pipeline.test.ts",
         "ruby": ROOT / "ruby" / "spec" / "pipeline_spec.rb",
         "python": ROOT / "python" / "tests" / "test_pipeline.py",
     },
@@ -584,7 +584,7 @@ def main():
         sections = group_by_section(tests)
 
         for lang in langs:
-            ext = {"js": "js", "ruby": "rb", "python": "py", "lua": "lua"}[lang]
+            ext = {"js": "ts", "ruby": "rb", "python": "py", "lua": "lua"}[lang]
             template_path = f"{module}.{ext}.j2"
             try:
                 tmpl = env.get_template(template_path)

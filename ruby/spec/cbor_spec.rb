@@ -97,12 +97,12 @@ RSpec.describe 'WowCbor' do
 
   describe 'D. Plater v2 prefix' do
     it 'D1: encodes with !PLATER:2! prefix' do
-      enc = Pipeline.encode(ExportResult.new('plater', 2, { 'x' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'plater', version: 2, data: { 'x' => 1 }))
       expect(enc).to start_with('!PLATER:2!')
     end
 
     it 'D2: decodes !PLATER:2! to plater v2' do
-      enc = Pipeline.encode(ExportResult.new('plater', 2, { 'x' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'plater', version: 2, data: { 'x' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('plater')
       expect(dec.version).to eq(2)
@@ -110,7 +110,7 @@ RSpec.describe 'WowCbor' do
 
     it 'D3: Plater v2 round-trip preserves data' do
       data = { 'profile' => 'Default', 'enabled' => true, 'level' => 5 }
-      enc = Pipeline.encode(ExportResult.new('plater', 2, data, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'plater', version: 2, data: data))
       dec = Pipeline.decode(enc)
       expect(dec.data['profile']).to eq('Default')
       expect(dec.data['enabled']).to eq(true)
@@ -118,7 +118,7 @@ RSpec.describe 'WowCbor' do
     end
 
     it 'D4: !PLATER:2! is detected before ! catch-all' do
-      enc = Pipeline.encode(ExportResult.new('plater', 2, 'test', nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'plater', version: 2, data: 'test'))
       expect(enc).to start_with('!PLATER:2!')
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('plater')

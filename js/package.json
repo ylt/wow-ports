@@ -1,14 +1,20 @@
 {
   "name": "azerite",
   "version": "0.1.0",
+  "type": "module",
   "description": "Decode and encode WoW addon export strings (WeakAuras, ElvUI, Plater, MDT, VuhDo, and more)",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "lib/",
-    "index.js",
+    "dist/",
     "LICENSE",
     "README.md"
   ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
   "author": "Joe Carter <theupperquartile@gmail.com>",
   "license": "ISC",
   "repository": {
@@ -28,5 +34,12 @@
   ],
   "dependencies": {
     "cbor-x": "^1.5.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "^1.3.11",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1"
   }
 }

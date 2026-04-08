@@ -60,7 +60,7 @@ RSpec.describe 'LibCompress' do
     end
 
     it 'raises on nil input' do
-      expect { LibCompress.decompress(nil) }.to raise_error(LibCompress::Error)
+      expect { LibCompress.decompress(nil) }.to raise_error(TypeError)
     end
 
     it 'raises on unknown method' do

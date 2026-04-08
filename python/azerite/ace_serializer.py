@@ -6,7 +6,7 @@ Type prefixes: ^S string, ^N number, ^F float mantissa, ^f float exponent,
                ^T table open, ^t table close, ^B true, ^b false, ^Z nil.
 
 String escaping is done in a single pass via re.sub over the character class
-[\x00-\x20\x5E\x7E\x7F].
+[\x00-\x20\x5e\x7e\x7f].
 
 Float serialization uses math.frexp() for decomposition (^F/^f format) for
 non-integer, non-infinity floats; plain ^N decimal for integers and infinity.
@@ -29,13 +29,13 @@ _UNESCAPE_PATTERN = re.compile(r"~(.)", re.DOTALL)
 
 def _escape_char(m: re.Match) -> str:
     byte = ord(m.group(0))
-    if byte == 0x1E:   # 30 — special: 30+64=94='^' would break parser
+    if byte == 0x1E:  # 30 — special: 30+64=94='^' would break parser
         return "~z"
-    if byte == 0x5E:   # '^'
+    if byte == 0x5E:  # '^'
         return "~}"
-    if byte == 0x7E:   # '~'
+    if byte == 0x7E:  # '~'
         return "~|"
-    if byte == 0x7F:   # DEL
+    if byte == 0x7F:  # DEL
         return "~{"
     return "~" + chr(byte + 64)
 
@@ -43,15 +43,15 @@ def _escape_char(m: re.Match) -> str:
 def _unescape_char(m: re.Match) -> str:
     c = m.group(1)
     o = ord(c)
-    if o < 122:        # generic: chr(byte - 64)
+    if o < 122:  # generic: chr(byte - 64)
         return chr(o - 64)
-    if o == 122:       # ~z → byte 30
+    if o == 122:  # ~z → byte 30
         return "\x1e"
-    if o == 123:       # ~{ → DEL
+    if o == 123:  # ~{ → DEL
         return "\x7f"
-    if o == 124:       # ~| → ~
+    if o == 124:  # ~| → ~
         return "~"
-    if o == 125:       # ~} → ^
+    if o == 125:  # ~} → ^
         return "^"
     raise ValueError(f"Unknown escape sequence: ~{c!r}")
 
@@ -59,6 +59,7 @@ def _unescape_char(m: re.Match) -> str:
 # ---------------------------------------------------------------------------
 # Serializer
 # ---------------------------------------------------------------------------
+
 
 class WowAceSerializer:
     """Serialize Python objects to WoW Ace wire format."""
@@ -102,7 +103,7 @@ class WowAceSerializer:
             return f"^N{str_val}"
         # frexp-based encoding for non-integer floats (matches JS WowAceSerializer)
         m, e = math.frexp(num)
-        int_mantissa = int(m * (2 ** 53))
+        int_mantissa = int(m * (2**53))
         adj_exponent = e - 53
         return f"^F{int_mantissa}^f{adj_exponent}"
 
@@ -125,6 +126,7 @@ class WowAceSerializer:
 # ---------------------------------------------------------------------------
 # Deserializer cursor
 # ---------------------------------------------------------------------------
+
 
 class _Cursor:
     """Mutable string position cursor for the deserializer."""
@@ -241,6 +243,7 @@ class WowAceDeserializer:
 # ---------------------------------------------------------------------------
 # Convenience combined class
 # ---------------------------------------------------------------------------
+
 
 class WowAce(WowAceSerializer, WowAceDeserializer):
     """Combined serialize + deserialize interface."""

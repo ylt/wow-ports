@@ -1,0 +1,9 @@
+--dir
+.
+--ignore=/tmp/
+--ignore=/vendor/bundle
+--ignore=/sorbet/rbi/hidden-definitions/
+--ignore=/sorbet/rbi/sorbet-typed/
+--ignore=/sorbet/rbi/gems/
+--ignore=/sorbet/rbi/todo.rbi
+--ignore=/spec/

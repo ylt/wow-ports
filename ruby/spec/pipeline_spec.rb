@@ -11,24 +11,24 @@ RSpec.describe 'Pipeline' do
 
   describe 'A. Prefix encoding' do
     it 'A1: WA v1 uses ! prefix' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 1, 'x', nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: 'x'))
       expect(enc).to start_with('!')
       expect(enc).not_to start_with('!WA:2!')
       expect(enc).not_to start_with('!E1!')
     end
 
     it 'A2: ElvUI uses !E1! prefix' do
-      enc = Pipeline.encode(ExportResult.new('elvui', 1, 'x', nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'elvui', version: 1, data: 'x'))
       expect(enc).to start_with('!E1!')
     end
 
     it 'A3: legacy (v0) uses no prefix' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 0, 'x', nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 0, data: 'x'))
       expect(enc).not_to start_with('!')
     end
 
     it 'A4: WA v2 uses !WA:2! prefix' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 2, { 'a' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 2, data: { 'a' => 1 }))
       expect(enc).to start_with('!WA:2!')
     end
 
@@ -36,28 +36,28 @@ RSpec.describe 'Pipeline' do
 
   describe 'B. Prefix detection' do
     it 'B1: !E1! detected as elvui v1' do
-      enc = Pipeline.encode(ExportResult.new('elvui', 1, { 'a' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'elvui', version: 1, data: { 'a' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('elvui')
       expect(dec.version).to eq(1)
     end
 
     it 'B2: ! detected as weakauras v1' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 1, { 'a' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: { 'a' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('weakauras')
       expect(dec.version).to eq(1)
     end
 
     it 'B3: no prefix detected as weakauras v0 (legacy)' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 0, { 'a' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 0, data: { 'a' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('weakauras')
       expect(dec.version).to eq(0)
     end
 
     it 'B4: !WA:2! detected as weakauras v2' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 2, { 'a' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 2, data: { 'a' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec.addon).to eq('weakauras')
       expect(dec.version).to eq(2)
@@ -67,7 +67,7 @@ RSpec.describe 'Pipeline' do
 
   describe 'C. ExportResult structure' do
     it 'C1: decode returns all four fields' do
-      enc = Pipeline.encode(ExportResult.new('weakauras', 1, { 'x' => 1 }, nil))
+      enc = Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: { 'x' => 1 }))
       dec = Pipeline.decode(enc)
       expect(dec).to respond_to(:addon)
       expect(dec).to respond_to(:version)
@@ -79,7 +79,7 @@ RSpec.describe 'Pipeline' do
 
   describe 'D. Round-trips' do
     it 'D1: WA v1 string' do
-      orig = ExportResult.new('weakauras', 1, 'hello', nil)
+      orig = ExportResult.new(addon: 'weakauras', version: 1, data: 'hello')
       dec  = Pipeline.decode(Pipeline.encode(orig))
       expect(dec.data).to eq('hello')
       expect(dec.addon).to eq('weakauras')
@@ -89,34 +89,34 @@ RSpec.describe 'Pipeline' do
 
     it 'D2: WA v1 table' do
       data = { 'key' => 'value', 'num' => 42 }
-      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new('weakauras', 1, data, nil)))
+      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: data)))
       expect(dec.data['key']).to eq('value')
       expect(dec.data['num']).to eq(42)
     end
 
     it 'D3: WA v1 array' do
       data = { 1 => '1', 2 => '2', 3 => '3' }
-      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new('weakauras', 1, data, nil)))
+      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: data)))
       expect(dec.data).to eq(data)
     end
 
     it 'D4: WA v1 nested table' do
       data = { 'outer' => { 'inner' => 99 }, 'list' => { 1 => 1, 2 => 2 } }
-      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new('weakauras', 1, data, nil)))
+      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 1, data: data)))
       expect(dec.data['outer']['inner']).to eq(99)
       expect(dec.data['list']).to eq({ 1 => 1, 2 => 2 })
     end
 
     it 'D5: legacy v0 round-trip' do
       data = { 'flag' => true, 'n' => -5 }
-      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new('weakauras', 0, data, nil)))
+      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 0, data: data)))
       expect(dec.data['flag']).to eq(true)
       expect(dec.data['n']).to eq(-5)
     end
 
     it 'D6: WA v2 round-trip' do
       data = { 'key' => 'v2data', 'num' => 7 }
-      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new('weakauras', 2, data, nil)))
+      dec  = Pipeline.decode(Pipeline.encode(ExportResult.new(addon: 'weakauras', version: 2, data: data)))
       expect(dec.data['key']).to eq('v2data')
       expect(dec.data['num']).to eq(7)
     end
@@ -126,7 +126,7 @@ RSpec.describe 'Pipeline' do
   describe 'E. ElvUI metadata' do
     it 'E1: round-trip preserves metadata profileType and profileKey' do
       metadata = { profile_type: 'profile', profile_key: 'Default' }
-      orig = ExportResult.new('elvui', 1, { 'setting' => 1 }, metadata)
+      orig = ExportResult.new(addon: 'elvui', version: 1, data: { 'setting' => 1 }, metadata: metadata)
       dec  = Pipeline.decode(Pipeline.encode(orig))
       expect(dec.addon).to eq('elvui')
       expect(dec.metadata[:profile_type]).to eq('profile')
@@ -135,7 +135,7 @@ RSpec.describe 'Pipeline' do
     end
 
     it 'E2: ElvUI without metadata gives null metadata after decode' do
-      orig = ExportResult.new('elvui', 1, { 'a' => 1 }, nil)
+      orig = ExportResult.new(addon: 'elvui', version: 1, data: { 'a' => 1 })
       dec  = Pipeline.decode(Pipeline.encode(orig))
       expect(dec.metadata).to be_nil
     end
